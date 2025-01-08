@@ -39,5 +39,21 @@ export const getPatients = () => api.get('/patients');
 export const getPatientById = (id) => api.get(`/patients/${id}`);
 export const createPatient = (patientData) => api.post('/patients', patientData);
 export const updatePatient = (id, patientData) => api.put(`/patients/${id}`, patientData);
+export const getDietCharts = () => api.get('/diet-charts');
+export const getDietChartById = (id) => api.get(`/diet-charts/${id}`);
+export const createDietChart = (data) => api.post('/diet-charts', data);
+export const updateDietChart = (id, data) => api.put(`/diet-charts/${id}`, data);
+export const updateMealStatus = (chartId, mealId, status) => 
+    api.put(`/diet-charts/${chartId}/meals/${mealId}`, { status });
+export const getPantryTasks = () => api.get('/pantry-tasks');
+export const getMyTasks = () => api.get('/pantry-tasks/my-tasks');
+export const updateTaskStatus = (taskId, status) => 
+    api.put(`/pantry-tasks/${taskId}/status`, { status });
+export const assignDeliveryPersonnel = (taskId, deliveryPersonId) =>
+    api.put(`/pantry-tasks/${taskId}/assign-delivery`, { deliveryPersonId });
+export const getDeliveryTasks = () => api.get('/delivery-tasks');
+export const updateDeliveryStatus = (taskId, status, notes) => 
+    api.put(`/delivery-tasks/${taskId}/status`, { status, notes });
+export const getDashboardStats = () => api.get('/admin/dashboard-stats');
 
 export default api; 

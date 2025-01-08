@@ -3,15 +3,15 @@ const mongoose = require('mongoose');
 const mealSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['breakfast', 'lunch', 'dinner'],
-        required: true
+        required: true,
+        enum: ['breakfast', 'lunch', 'dinner']
     },
     items: [{
         name: String,
         quantity: String,
         specialInstructions: String
     }],
-    specialInstructions: String,
+    specialInstructions: [String],
     preparationStatus: {
         type: String,
         enum: ['pending', 'preparing', 'ready', 'delivered'],
@@ -20,7 +20,16 @@ const mealSchema = new mongoose.Schema({
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }
+    },
+    preparedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    deliveredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    deliveryTime: Date
 });
 
 const dietChartSchema = new mongoose.Schema({
@@ -29,16 +38,24 @@ const dietChartSchema = new mongoose.Schema({
         ref: 'Patient',
         required: true
     },
-    date: {
+    startDate: {
+        type: Date,
+        required: true
+    },
+    endDate: {
         type: Date,
         required: true
     },
     meals: [mealSchema],
-    specialDietaryInstructions: String,
+    restrictions: [String],
     status: {
         type: String,
         enum: ['active', 'completed', 'cancelled'],
         default: 'active'
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 }, {
     timestamps: true
