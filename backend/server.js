@@ -3,6 +3,16 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
+// Verify environment variables are loaded
+if (!process.env.JWT_SECRET) {
+    console.error('JWT_SECRET is not defined in environment variables');
+    process.exit(1);
+}
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const patientRoutes = require('./routes/patients');
+
 const app = express();
 
 // Connect to database
@@ -12,9 +22,14 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
-// Basic route
-app.get('/api', (req, res) => {
-    res.json({ message: 'Welcome to Food Delivery API' });
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/patients', patientRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
 });
 
 const PORT = process.env.PORT || 5000;
