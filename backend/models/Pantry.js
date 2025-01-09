@@ -5,25 +5,14 @@ const pantrySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    location: {
-        type: String,
-        required: true
-    },
-    contactNumber: {
-        type: String,
+    capacity: {
+        type: Number,
         required: true
     },
     staffMembers: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }],
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
-    }
-}, {
-    timestamps: true
-});
+    }]
+}, { timestamps: true });
 
 module.exports = mongoose.model('Pantry', pantrySchema); 

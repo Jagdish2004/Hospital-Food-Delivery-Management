@@ -48,44 +48,40 @@ const getDietChartById = async (req, res) => {
 // @access  Private/Manager/Admin
 const createDietChart = async (req, res) => {
     try {
-        const { patient, startDate, endDate, meals, specialInstructions } = req.body;
+        const { patient, status, meals } = req.body;
 
-        // Check if patient exists
-        const existingPatient = await Patient.findById(patient);
-        if (!existingPatient) {
-            return res.status(404).json({ message: 'Patient not found' });
-        }
-
-        // Check for active diet chart
-        const activeChart = await DietChart.findOne({
-            patient,
-            status: 'active'
-        });
-
-        if (activeChart) {
-            return res.status(400).json({ 
-                message: 'Patient already has an active diet chart' 
+        // Validate required fields
+        if (!patient || !meals || !Array.isArray(meals)) {
+            return res.status(400).json({
+                message: 'Patient and meals are required'
             });
         }
 
+        // Create new diet chart
         const dietChart = new DietChart({
             patient,
-            startDate,
-            endDate,
-            meals,
-            specialInstructions,
-            createdBy: req.user._id
+            status,
+            meals: meals.map(meal => ({
+                type: meal.type,
+                time: meal.time,
+                items: Array.isArray(meal.items) ? meal.items : [meal.items],
+                calories: meal.calories,
+                specialInstructions: meal.specialInstructions
+            }))
         });
 
-        const savedChart = await dietChart.save();
+        await dietChart.save();
 
-        // Update patient's current diet chart
-        existingPatient.currentDietChart = savedChart._id;
-        await existingPatient.save();
-
-        res.status(201).json(savedChart);
+        res.status(201).json({
+            success: true,
+            data: dietChart
+        });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error in createDietChart:', error);
+        res.status(500).json({
+            message: 'Failed to create diet chart',
+            error: error.message
+        });
     }
 };
 

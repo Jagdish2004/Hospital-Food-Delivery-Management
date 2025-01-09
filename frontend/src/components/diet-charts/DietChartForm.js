@@ -87,18 +87,53 @@ const DietChartForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validate form data
+        if (!formData.patient) {
+            toast.error('Please select a patient');
+            return;
+        }
+
+        if (!formData.meals.length) {
+            toast.error('Please add at least one meal');
+            return;
+        }
+
+        // Validate each meal
+        const isValidMeals = formData.meals.every(meal => 
+            meal.type && meal.time && meal.items
+        );
+
+        if (!isValidMeals) {
+            toast.error('Please fill in all required meal fields');
+            return;
+        }
+
         try {
             setLoading(true);
+            
+            // Format the data
+            const dietChartData = {
+                ...formData,
+                meals: formData.meals.map(meal => ({
+                    ...meal,
+                    items: typeof meal.items === 'string' ? 
+                        meal.items.split(',').map(item => item.trim()) : 
+                        meal.items
+                }))
+            };
+
             if (id) {
-                await updateDietChart(id, formData);
+                await updateDietChart(id, dietChartData);
                 toast.success('Diet chart updated successfully');
             } else {
-                await createDietChart(formData);
+                await createDietChart(dietChartData);
                 toast.success('Diet chart created successfully');
             }
             navigate('/diet-charts');
         } catch (error) {
-            toast.error('Failed to save diet chart');
+            console.error('Error saving diet chart:', error);
+            toast.error(error.response?.data?.message || 'Failed to save diet chart');
         } finally {
             setLoading(false);
         }

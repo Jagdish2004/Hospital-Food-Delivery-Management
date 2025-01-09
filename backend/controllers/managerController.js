@@ -52,6 +52,13 @@ const getDashboardStats = async (req, res) => {
             .lean()
         ]);
 
+        // Add recent pantry staff
+        const recentPantryStaff = await User.find({ role: 'pantry' })
+            .populate('pantry', 'name')
+            .select('-password')
+            .sort('-createdAt')
+            .limit(5);
+
         res.json({
             stats: {
                 patientCount,
@@ -63,7 +70,8 @@ const getDashboardStats = async (req, res) => {
             recentPatients,
             recentDietCharts,
             recentPantries,
-            recentDeliveries
+            recentDeliveries,
+            recentPantryStaff
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -110,7 +118,51 @@ const getReports = async (req, res) => {
     }
 };
 
+const getPantryStaff = async (req, res) => {
+    try {
+        const pantryStaff = await User.find({ role: 'pantry' })
+            .populate({
+                path: 'pantry',
+                select: 'name capacity staffMembers',
+                populate: {
+                    path: 'staffMembers',
+                    select: 'name'
+                }
+            })
+            .select('-password');
+
+        res.json(pantryStaff);
+    } catch (error) {
+        console.error('Error in getPantryStaff:', error);
+        res.status(500).json({ message: 'Failed to fetch pantry staff' });
+    }
+};
+
+const deleteStaff = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'Staff member not found' });
+        }
+
+        // If staff is assigned to a pantry, remove them from pantry's staffMembers
+        if (user.pantry) {
+            await Pantry.findByIdAndUpdate(user.pantry, {
+                $pull: { staffMembers: user._id }
+            });
+        }
+
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Staff member deleted successfully' });
+    } catch (error) {
+        console.error('Error in deleteStaff:', error);
+        res.status(500).json({ message: 'Failed to delete staff member' });
+    }
+};
+
 module.exports = {
     getDashboardStats,
-    getReports
+    getReports,
+    getPantryStaff,
+    deleteStaff
 }; 

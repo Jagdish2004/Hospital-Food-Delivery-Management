@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Grid,
@@ -22,10 +22,12 @@ import {
     RestaurantMenu as MenuIcon,
     Schedule as ScheduleIcon,
     TrendingUp as TrendingIcon,
-    Refresh as RefreshIcon
+    Refresh as RefreshIcon,
+    Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import MealTracker from './MealTracker';
 import { useNavigate } from 'react-router-dom';
+import { getPantryTasks } from '../../services/api';
 
 const PantryDashboard = () => {
     const [tabValue, setTabValue] = useState(0);
@@ -34,6 +36,35 @@ const PantryDashboard = () => {
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
     };
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await getPantryTasks();
+                const tasks = response.data || [];
+                
+                // Update stats silently
+                document.getElementById('pending-tasks').textContent = 
+                    tasks.filter(t => t.status === 'pending').length || '0';
+                document.getElementById('preparing-tasks').textContent = 
+                    tasks.filter(t => t.status === 'preparing').length || '0';
+                document.getElementById('ready-tasks').textContent = 
+                    tasks.filter(t => t.status === 'ready').length || '0';
+                document.getElementById('delivered-tasks').textContent = 
+                    tasks.filter(t => t.status === 'delivered').length || '0';
+            } catch (error) {
+                // Handle error silently
+                console.error('Error fetching tasks:', error);
+                ['pending-tasks', 'preparing-tasks', 'ready-tasks', 'delivered-tasks'].forEach(id => {
+                    document.getElementById(id).textContent = '0';
+                });
+            }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <Container maxWidth="lg">
@@ -86,6 +117,20 @@ const PantryDashboard = () => {
                                 }}
                             >
                                 Delivery Status
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<TaskIcon />}
+                                onClick={() => navigate('/meal-tasks')}
+                                sx={{ 
+                                    bgcolor: 'white', 
+                                    color: '#2e7d32',
+                                    '&:hover': {
+                                        bgcolor: '#e8f5e9',
+                                    }
+                                }}
+                            >
+                                View All Tasks
                             </Button>
                         </Box>
                     </Box>

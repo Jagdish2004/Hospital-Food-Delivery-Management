@@ -15,12 +15,13 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate();
-    const { login: authLogin } = useAuth();
+    const { login } = useAuth();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
+    const [error, setError] = useState('');
 
     const handleChange = (e) => {
         setFormData({
@@ -32,23 +33,36 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
 
         try {
             const response = await loginApi(formData);
-            console.log('Login response:', response.data); // Debug log
+            login(response.data.token, response.data.user);
             
-            // Store user data and token
-            authLogin(response.data.token, response.data.user);
-            
-            toast.success('Login successful!');
-            
-            // Delay navigation slightly to ensure context is updated
-            setTimeout(() => {
-                navigate('/dashboard');
-            }, 100);
+            // Redirect based on role without showing any messages
+            switch (response.data.user.role) {
+                case 'pantry':
+                    navigate('/pantry-dashboard');
+                    break;
+                case 'manager':
+                case 'admin':
+                    navigate('/dashboard');
+                    break;
+                case 'delivery':
+                    navigate('/delivery-dashboard');
+                    break;
+                default:
+                    navigate('/login');
+            }
         } catch (error) {
-            console.error('Login error:', error);
-            toast.error(error.response?.data?.message || 'Login failed');
+            // Only show specific login-related errors
+            if (error.response?.status === 401) {
+                setError('Invalid email or password');
+            } else if (error.response?.data?.message) {
+                setError(error.response.data.message);
+            } else {
+                setError('Login failed. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -60,6 +74,11 @@ const Login = () => {
                 <Typography component="h1" variant="h5" align="center">
                     Sign In
                 </Typography>
+                {error && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                        {error}
+                    </Alert>
+                )}
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
                     <TextField
                         margin="normal"

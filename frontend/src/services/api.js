@@ -26,19 +26,27 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        console.error('API Error:', error);
-        
-        const message = error.response?.data?.message || 'An error occurred';
-        
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-            toast.error('Session expired. Please login again.');
-        } else if (error.response?.status === 403) {
-            toast.error('You do not have permission to perform this action');
-        } else {
-            toast.error(message);
+        // Silently handle these cases without any messages
+        const silentRoutes = [
+            '/dashboard',
+            '/pantry-dashboard',
+            '/delivery-dashboard',
+            '/pantry/tasks',
+            '/pantry/my-tasks',
+            '/manager/dashboard-stats'
+        ];
+
+        const shouldHandleSilently = silentRoutes.some(route => 
+            error.config.url.includes(route)
+        );
+
+        if (!shouldHandleSilently) {
+            if (error.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+            // Don't show any other error messages
         }
         
         return Promise.reject(error);
@@ -59,7 +67,25 @@ export const deletePatient = (id) => api.delete(`/patients/${id}`);
 // Diet chart endpoints
 export const getDietCharts = () => api.get('/diet-charts');
 export const getDietChartById = (id) => api.get(`/diet-charts/${id}`);
-export const createDietChart = (data) => api.post('/diet-charts', data);
+export const createDietChart = async (data) => {
+    try {
+        const response = await api.post('/diet-charts', {
+            patient: data.patient,
+            status: data.status,
+            meals: data.meals.map(meal => ({
+                type: meal.type,
+                time: meal.time,
+                items: meal.items.split(',').map(item => item.trim()),
+                calories: meal.calories,
+                specialInstructions: meal.specialInstructions
+            }))
+        });
+        return response;
+    } catch (error) {
+        console.error('Error creating diet chart:', error);
+        throw error;
+    }
+};
 export const updateDietChart = async (id, data) => {
     try {
         console.log('Updating diet chart with data:', data);
@@ -102,7 +128,7 @@ export const updateDeliveryStatus = (taskId, status, notes) =>
 
 // Staff endpoints
 export const getDeliveryStaff = () => api.get('/api/users/delivery-staff');
-export const getPantryStaff = () => api.get('/api/users/pantry-staff');
+export const getPantryStaff = () => api.get('/manager/pantry-staff');
 
 // Manager specific endpoints
 export const getManagerStats = async () => {
@@ -128,5 +154,10 @@ export const assignStaffToPantry = (pantryId, staffId) =>
 
 // Add this with your other API functions
 export const getReports = () => api.get('/manager/reports');
+
+// Add these new staff management endpoints
+export const createPantryStaff = (data) => api.post('/auth/register', { ...data, role: 'pantry' });
+export const updatePantryStaff = (id, data) => api.put(`/api/users/${id}`, data);
+export const deletePantryStaff = (id) => api.delete(`/manager/pantry-staff/${id}`);
 
 export default api; 

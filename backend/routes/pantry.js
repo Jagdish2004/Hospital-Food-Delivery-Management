@@ -14,8 +14,9 @@ const {
     updatePantry
 } = require('../controllers/pantryController');
 
-// Protect all routes
+// Allow both pantry staff and managers to access these routes
 router.use(protect);
+router.use(authorize('pantry', 'manager', 'admin'));
 
 // Pantry management routes
 router.route('/')
@@ -28,14 +29,13 @@ router.route('/:id')
 
 // Task management routes
 router.route('/tasks')
-    .get(authorize('pantry', 'manager'), getPantryTasks)
-    .post(authorize('manager'), createPantryTask);
+    .get(protect, authorize('pantry', 'manager'), getPantryTasks);
 
 router.route('/my-tasks')
-    .get(authorize('pantry'), getMyTasks);
+    .get(protect, authorize('pantry'), getMyTasks);
 
 router.route('/tasks/:taskId/status')
-    .put(authorize('pantry'), updateTaskStatus);
+    .put(protect, authorize('pantry'), updateTaskStatus);
 
 router.route('/tasks/:taskId/assign-delivery')
     .put(authorize('pantry', 'manager'), assignDeliveryPerson);

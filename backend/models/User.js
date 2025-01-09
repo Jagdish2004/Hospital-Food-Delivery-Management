@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: true
+    },
+    pantry: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Pantry'
     }
 }, {
     timestamps: true

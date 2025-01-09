@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -16,16 +16,33 @@ import DeliveryManagement from './components/delivery/DeliveryManagement';
 import Reports from './components/admin/Reports';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import PantryStaff from './components/pantry/PantryStaff';
+import MealTasks from './components/pantry/MealTasks';
 
 const theme = createTheme({
     // Add your theme customization here
 });
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const { user } = useAuth();
+    const location = useLocation();
+
     if (!user) {
-        return <Navigate to="/login" />;
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
+
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+        // Silently redirect to appropriate dashboard based on role
+        if (user.role === 'pantry') {
+            return <Navigate to="/pantry-dashboard" replace />;
+        } else if (user.role === 'manager') {
+            return <Navigate to="/dashboard" replace />;
+        } else if (user.role === 'delivery') {
+            return <Navigate to="/delivery-dashboard" replace />;
+        }
+        return <Navigate to="/login" replace />;
+    }
+
     return <Layout>{children}</Layout>;
 };
 
@@ -43,12 +60,12 @@ function App() {
                             </ProtectedRoute>
                         } />
                         <Route path="/dashboard" element={
-                            <ProtectedRoute>
+                            <ProtectedRoute allowedRoles={['manager', 'admin']}>
                                 <ManagerDashboard />
                             </ProtectedRoute>
                         } />
                         <Route path="/pantry-dashboard" element={
-                            <ProtectedRoute>
+                            <ProtectedRoute allowedRoles={['pantry']}>
                                 <PantryDashboard />
                             </ProtectedRoute>
                         } />
@@ -95,6 +112,16 @@ function App() {
                         <Route path="/reports" element={
                             <ProtectedRoute>
                                 <Reports />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/pantry-staff" element={
+                            <ProtectedRoute>
+                                <PantryStaff />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/meal-tasks" element={
+                            <ProtectedRoute allowedRoles={['pantry', 'manager']}>
+                                <MealTasks />
                             </ProtectedRoute>
                         } />
                     </Routes>
