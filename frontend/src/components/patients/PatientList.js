@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Paper,
     Table,
@@ -8,22 +7,25 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Button,
-    Typography,
     IconButton,
+    Button,
     Box,
-    Chip
+    Typography,
+    CircularProgress
 } from '@mui/material';
 import {
-    Add as AddIcon,
     Edit as EditIcon,
-    Delete as DeleteIcon
+    Delete as DeleteIcon,
+    Restaurant as DietIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { getPatients } from '../../services/api';
+import { toast } from 'react-toastify';
 
 const PatientList = () => {
-    const [patients, setPatients] = useState([]);
     const navigate = useNavigate();
+    const [patients, setPatients] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchPatients();
@@ -34,40 +36,44 @@ const PatientList = () => {
             const response = await getPatients();
             setPatients(response.data);
         } catch (error) {
-            console.error('Error fetching patients:', error);
+            toast.error('Error fetching patients');
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleEdit = (patientId) => {
-        navigate(`/patients/edit/${patientId}`);
-    };
-
-    const handleDelete = async (patientId) => {
-        // Add delete confirmation and API integration
-    };
+    if (loading) {
+        return (
+            <Box display="flex" justifyContent="center" m={3}>
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     return (
-        <div>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4">Patients</Typography>
+        <Box>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h5">Patients</Typography>
                 <Button
                     variant="contained"
                     color="primary"
-                    startIcon={<AddIcon />}
                     onClick={() => navigate('/patients/new')}
                 >
-                    Add Patient
+                    Add New Patient
                 </Button>
             </Box>
+
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
                         <TableRow>
                             <TableCell>Name</TableCell>
                             <TableCell>Room</TableCell>
+                            <TableCell>Bed</TableCell>
                             <TableCell>Age</TableCell>
-                            <TableCell>Diseases</TableCell>
-                            <TableCell>Diet Status</TableCell>
+                            <TableCell>Gender</TableCell>
+                            <TableCell>Contact</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -75,37 +81,21 @@ const PatientList = () => {
                         {patients.map((patient) => (
                             <TableRow key={patient._id}>
                                 <TableCell>{patient.name}</TableCell>
-                                <TableCell>{`${patient.roomNumber} (Bed ${patient.bedNumber})`}</TableCell>
+                                <TableCell>{patient.roomNumber}</TableCell>
+                                <TableCell>{patient.bedNumber}</TableCell>
                                 <TableCell>{patient.age}</TableCell>
-                                <TableCell>
-                                    {patient.diseases.map((disease, index) => (
-                                        <Chip
-                                            key={index}
-                                            label={disease}
-                                            size="small"
-                                            sx={{ mr: 0.5 }}
-                                        />
-                                    ))}
-                                </TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label="Active"
-                                        color="success"
-                                        size="small"
-                                    />
-                                </TableCell>
+                                <TableCell>{patient.gender}</TableCell>
+                                <TableCell>{patient.contactNumber}</TableCell>
                                 <TableCell>
                                     <IconButton
-                                        color="primary"
-                                        onClick={() => handleEdit(patient._id)}
+                                        onClick={() => navigate(`/patients/edit/${patient._id}`)}
                                     >
                                         <EditIcon />
                                     </IconButton>
                                     <IconButton
-                                        color="error"
-                                        onClick={() => handleDelete(patient._id)}
+                                        onClick={() => navigate(`/diet-charts/new/${patient._id}`)}
                                     >
-                                        <DeleteIcon />
+                                        <DietIcon />
                                     </IconButton>
                                 </TableCell>
                             </TableRow>
@@ -113,7 +103,7 @@ const PatientList = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
-        </div>
+        </Box>
     );
 };
 

@@ -41,6 +41,10 @@ const patientSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: true
+    },
+    currentDietChart: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'DietChart'
     }
 }, {
     timestamps: true

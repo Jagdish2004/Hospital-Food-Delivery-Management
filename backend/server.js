@@ -14,6 +14,8 @@ const authRoutes = require('./routes/auth');
 const patientRoutes = require('./routes/patients');
 const pantryRoutes = require('./routes/pantry');
 const deliveryRoutes = require('./routes/delivery');
+const managerRoutes = require('./routes/manager');
+const dietChartRoutes = require('./routes/dietCharts');
 
 const app = express();
 
@@ -24,15 +26,23 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
+// Add this before your routes
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/pantry', pantryRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/manager', managerRoutes);
+app.use('/api/diet-charts', dietChartRoutes);
 
-// Error handling middleware
+// Add this after your routes
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Error:', err);
     res.status(500).json({ 
         message: 'Something broke!',
         error: process.env.NODE_ENV === 'development' ? err.message : undefined

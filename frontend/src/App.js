@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import ProtectedRoute from './components/routing/ProtectedRoute';
@@ -9,6 +9,13 @@ import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import PatientList from './components/patients/PatientList';
+import PatientForm from './components/patients/PatientForm';
+import AdminDashboard from './components/dashboard/AdminDashboard';
+import ManagerDashboard from './components/dashboard/ManagerDashboard';
+import PantryDashboard from './components/dashboard/PantryDashboard';
+import DeliveryDashboard from './components/dashboard/DeliveryDashboard';
+import DietChartForm from './components/diet-charts/DietChartForm';
 
 const theme = createTheme({
     palette: {
@@ -17,6 +24,24 @@ const theme = createTheme({
         }
     }
 });
+
+// Dashboard selector component
+const DashboardSelector = () => {
+    const { user } = useAuth();
+
+    switch (user?.role) {
+        case 'admin':
+            return <AdminDashboard />;
+        case 'manager':
+            return <ManagerDashboard />;
+        case 'pantry':
+            return <PantryDashboard />;
+        case 'delivery':
+            return <DeliveryDashboard />;
+        default:
+            return <Navigate to="/login" />;
+    }
+};
 
 function App() {
     return (
@@ -32,22 +57,21 @@ function App() {
                             path="/*"
                             element={
                                 <ProtectedRoute>
-                                    <Layout />
+                                    <Layout>
+                                        <Routes>
+                                            <Route path="/dashboard" element={<DashboardSelector />} />
+                                            <Route path="/patients" element={<PatientList />} />
+                                            <Route path="/patients/new" element={<PatientForm />} />
+                                            <Route path="/patients/edit/:id" element={<PatientForm />} />
+                                            <Route path="/diet-charts/new/:patientId" element={<DietChartForm />} />
+                                            <Route path="/diet-charts/edit/:chartId" element={<DietChartForm />} />
+                                        </Routes>
+                                    </Layout>
                                 </ProtectedRoute>
                             }
                         />
                     </Routes>
-                    <ToastContainer
-                        position="top-right"
-                        autoClose={5000}
-                        hideProgressBar={false}
-                        newestOnTop
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                    />
+                    <ToastContainer />
                 </Router>
             </AuthProvider>
         </ThemeProvider>

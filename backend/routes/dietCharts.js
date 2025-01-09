@@ -1,23 +1,24 @@
 const express = require('express');
 const router = express.Router();
+const { protect, authorize } = require('../middleware/auth');
 const {
-    createDietChart,
     getDietCharts,
     getDietChartById,
+    createDietChart,
     updateDietChart,
-    updateMealStatus
+    deleteDietChart
 } = require('../controllers/dietChartController');
-const { protect, admin } = require('../middleware/auth');
+
+// Protect all routes
+router.use(protect);
 
 router.route('/')
-    .post(protect, admin, createDietChart)
-    .get(protect, getDietCharts);
+    .get(authorize('manager', 'admin', 'pantry'), getDietCharts)
+    .post(authorize('manager', 'admin'), createDietChart);
 
 router.route('/:id')
-    .get(protect, getDietChartById)
-    .put(protect, admin, updateDietChart);
-
-router.route('/:id/meals/:mealId')
-    .put(protect, updateMealStatus);
+    .get(authorize('manager', 'admin', 'pantry'), getDietChartById)
+    .put(authorize('manager', 'admin'), updateDietChart)
+    .delete(authorize('admin'), deleteDietChart);
 
 module.exports = router; 
