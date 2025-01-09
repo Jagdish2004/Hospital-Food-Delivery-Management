@@ -85,12 +85,15 @@ export const updateMealStatus = (chartId, mealId, status) =>
 export const deleteDietChart = (id) => api.delete(`/diet-charts/${id}`);
 
 // Pantry endpoints
-export const getPantryTasks = () => api.get('/api/pantry/tasks');
-export const getMyTasks = () => api.get('/pantry-tasks/my-tasks');
-export const updateTaskStatus = (taskId, status) => 
-    api.put(`/api/pantry/tasks/${taskId}/status`, { status });
-export const assignDeliveryPersonnel = (taskId, deliveryPersonId) =>
-    api.put(`/api/pantry/tasks/${taskId}/assign`, { deliveryPersonId });
+export const getPantryTasks = () => api.get('/pantry/tasks');
+export const getMyPantryTasks = () => api.get('/pantry/my-tasks');
+export const createPantryTask = (data) => api.post('/pantry/tasks', data);
+export const updateTaskStatus = (taskId, data) => 
+    api.put(`/pantry/tasks/${taskId}/status`, data);
+export const assignDeliveryPerson = (taskId, deliveryPersonId) =>
+    api.put(`/pantry/tasks/${taskId}/assign-delivery`, { deliveryPersonId });
+export const performQualityCheck = (taskId, notes) =>
+    api.put(`/pantry/tasks/${taskId}/quality-check`, { notes });
 
 // Delivery endpoints
 export const getDeliveryTasks = () => api.get('/api/delivery/tasks');
@@ -104,14 +107,7 @@ export const getPantryStaff = () => api.get('/api/users/pantry-staff');
 // Manager specific endpoints
 export const getManagerStats = async () => {
     try {
-        console.log('Fetching manager stats...');
         const response = await api.get('/manager/dashboard-stats');
-        console.log('Manager stats raw response:', response);
-
-        if (!response.data) {
-            throw new Error('No data received from server');
-        }
-
         return response.data;
     } catch (error) {
         console.error('Error in getManagerStats:', error);
@@ -121,5 +117,16 @@ export const getManagerStats = async () => {
 
 export const getDeliveryStatus = () => api.get('/delivery/status');
 export const assignTask = (taskData) => api.post('/pantry/tasks', taskData);
+
+// Pantry Management endpoints
+export const getPantries = () => api.get('/pantry');
+export const createPantry = (data) => api.post('/pantry', data);
+export const updatePantry = (id, data) => api.put(`/pantry/${id}`, data);
+export const getPantryById = (id) => api.get(`/pantry/${id}`);
+export const assignStaffToPantry = (pantryId, staffId) => 
+    api.post(`/pantry/${pantryId}/staff/${staffId}`);
+
+// Add this with your other API functions
+export const getReports = () => api.get('/manager/reports');
 
 export default api; 

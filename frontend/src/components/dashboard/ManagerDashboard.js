@@ -5,21 +5,25 @@ import {
     Typography,
     Box,
     Button,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
+    Card,
+    CardContent,
     IconButton,
     Chip,
-    CircularProgress
+    CircularProgress,
+    Divider,
+    Avatar,
+    LinearProgress
 } from '@mui/material';
 import {
     Add as AddIcon,
     Edit as EditIcon,
     Restaurant as DietIcon,
-    Person as PersonIcon
+    Person as PersonIcon,
+    Kitchen as KitchenIcon,
+    LocalShipping as DeliveryIcon,
+    TrendingUp as TrendingIcon,
+    Assignment as TaskIcon,
+    Group as StaffIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getManagerStats } from '../../services/api';
@@ -33,10 +37,12 @@ const ManagerDashboard = () => {
             patientCount: 0,
             dietChartCount: 0,
             pantryStaffCount: 0,
-            deliveryStaffCount: 0
+            deliveryStaffCount: 0,
+            deliveredCount: 0
         },
         recentPatients: [],
-        recentDietCharts: []
+        recentDietCharts: [],
+        recentDeliveries: []
     });
 
     useEffect(() => {
@@ -45,27 +51,10 @@ const ManagerDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            setLoading(true);
             const response = await getManagerStats();
-            console.log('Raw API Response:', response); // Debug log
-
-            // Check if response has data property
-            const data = response.data || response;
-            console.log('Processed data:', data); // Debug log
-
-            setDashboardData({
-                stats: {
-                    patientCount: data?.stats?.patientCount ?? 0,
-                    dietChartCount: data?.stats?.dietChartCount ?? 0,
-                    pantryStaffCount: data?.stats?.pantryStaffCount ?? 0,
-                    deliveryStaffCount: data?.stats?.deliveryStaffCount ?? 0
-                },
-                recentPatients: data?.recentPatients ?? [],
-                recentDietCharts: data?.recentDietCharts ?? []
-            });
+            setDashboardData(response);
         } catch (error) {
-            console.error('Dashboard Error:', error);
-            toast.error('Failed to load dashboard data');
+            console.error('Error fetching dashboard data:', error);
         } finally {
             setLoading(false);
         }
@@ -73,164 +62,284 @@ const ManagerDashboard = () => {
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" m={3}>
-                <CircularProgress />
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+                <CircularProgress size={60} />
             </Box>
         );
     }
 
     return (
         <Box p={3}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h4">Manager Dashboard</Typography>
-                <Box display="flex" gap={2}>
-                    <Button
-                        variant="contained"
-                        startIcon={<PersonIcon />}
-                        onClick={() => navigate('/patients/new')}
-                    >
-                        Add Patient
-                    </Button>
-                    <Button
-                        variant="contained"
-                        startIcon={<DietIcon />}
-                        onClick={() => navigate('/diet-charts/new')}
-                    >
-                        Create Diet Chart
-                    </Button>
+            {/* Header Section */}
+            <Paper 
+                elevation={3} 
+                sx={{ 
+                    p: 3, 
+                    mb: 4, 
+                    background: 'linear-gradient(45deg, #1976d2 30%, #2196f3 90%)',
+                    color: 'white'
+                }}
+            >
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box>
+                        <Typography variant="h4">Manager Dashboard</Typography>
+                        <Typography variant="subtitle1">
+                            Overview of hospital food service operations
+                        </Typography>
+                    </Box>
+                    <Box display="flex" gap={2}>
+                        <Button
+                            variant="contained"
+                            startIcon={<PersonIcon />}
+                            onClick={() => navigate('/patients/new')}
+                            sx={{ 
+                                bgcolor: 'white', 
+                                color: '#1976d2',
+                                '&:hover': {
+                                    bgcolor: '#e3f2fd',
+                                }
+                            }}
+                        >
+                            Add Patient
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<DietIcon />}
+                            onClick={() => navigate('/diet-charts/new')}
+                            sx={{ 
+                                bgcolor: 'white', 
+                                color: '#1976d2',
+                                '&:hover': {
+                                    bgcolor: '#e3f2fd',
+                                }
+                            }}
+                        >
+                            Create Diet Chart
+                        </Button>
+                    </Box>
                 </Box>
-            </Box>
+            </Paper>
 
-            {/* Statistics */}
-            <Grid container spacing={3} mb={3}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Total Patients</Typography>
-                        <Typography variant="h4">{dashboardData.stats.patientCount}</Typography>
-                    </Paper>
+            {/* Stats Cards */}
+            <Grid container spacing={3} mb={4}>
+                <Grid item xs={12} md={3}>
+                    <Card elevation={3}>
+                        <CardContent sx={{ textAlign: 'center' }}>
+                            <PersonIcon sx={{ fontSize: 40, color: '#1976d2', mb: 1 }} />
+                            <Typography variant="h4" color="primary">
+                                {dashboardData.stats.patientCount}
+                            </Typography>
+                            <Typography variant="subtitle1" color="textSecondary">
+                                Active Patients
+                            </Typography>
+                        </CardContent>
+                    </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Diet Charts</Typography>
-                        <Typography variant="h4">{dashboardData.stats.dietChartCount}</Typography>
-                    </Paper>
+                <Grid item xs={12} md={3}>
+                    <Card elevation={3}>
+                        <CardContent sx={{ textAlign: 'center' }}>
+                            <DietIcon sx={{ fontSize: 40, color: '#2e7d32', mb: 1 }} />
+                            <Typography variant="h4" color="success.main">
+                                {dashboardData.stats.dietChartCount}
+                            </Typography>
+                            <Typography variant="subtitle1" color="textSecondary">
+                                Active Diet Charts
+                            </Typography>
+                        </CardContent>
+                    </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Pantry Staff</Typography>
-                        <Typography variant="h4">{dashboardData.stats.pantryStaffCount}</Typography>
-                    </Paper>
+                <Grid item xs={12} md={3}>
+                    <Card elevation={3}>
+                        <CardContent sx={{ textAlign: 'center' }}>
+                            <KitchenIcon sx={{ fontSize: 40, color: '#ed6c02', mb: 1 }} />
+                            <Typography variant="h4" color="warning.main">
+                                {dashboardData.stats.pantryStaffCount}
+                            </Typography>
+                            <Typography variant="subtitle1" color="textSecondary">
+                                Pantry Staff
+                            </Typography>
+                        </CardContent>
+                    </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Delivery Staff</Typography>
-                        <Typography variant="h4">{dashboardData.stats.deliveryStaffCount}</Typography>
-                    </Paper>
+                <Grid item xs={12} md={3}>
+                    <Card elevation={3}>
+                        <CardContent sx={{ textAlign: 'center' }}>
+                            <DeliveryIcon sx={{ fontSize: 40, color: '#9c27b0', mb: 1 }} />
+                            <Typography variant="h4" sx={{ color: 'secondary.main' }}>
+                                {dashboardData.stats.deliveredCount || 0}
+                            </Typography>
+                            <Typography variant="subtitle1" color="textSecondary">
+                                Deliveries Today
+                            </Typography>
+                        </CardContent>
+                    </Card>
                 </Grid>
             </Grid>
 
-            {/* Recent Patients */}
-            <Paper sx={{ mb: 3, p: 2 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="h6">Recent Patients</Typography>
-                    <Button
-                        variant="outlined"
-                        onClick={() => navigate('/patients')}
-                    >
-                        View All Patients
-                    </Button>
-                </Box>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Room</TableCell>
-                                <TableCell>Bed</TableCell>
-                                <TableCell>Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
+            {/* Recent Activities Section */}
+            <Grid container spacing={3}>
+                {/* Recent Patients */}
+                <Grid item xs={12} md={6}>
+                    <Card elevation={3}>
+                        <CardContent>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                <Typography variant="h6" color="primary">
+                                    Recent Patients
+                                </Typography>
+                                <Button 
+                                    size="small" 
+                                    onClick={() => navigate('/patients')}
+                                    endIcon={<TrendingIcon />}
+                                >
+                                    View All
+                                </Button>
+                            </Box>
+                            <Divider sx={{ mb: 2 }} />
                             {dashboardData.recentPatients.map((patient) => (
-                                <TableRow key={patient._id}>
-                                    <TableCell>{patient.name}</TableCell>
-                                    <TableCell>{patient.roomNumber}</TableCell>
-                                    <TableCell>{patient.bedNumber}</TableCell>
-                                    <TableCell>
+                                <Box 
+                                    key={patient._id} 
+                                    sx={{ 
+                                        mb: 2, 
+                                        p: 1.5, 
+                                        borderRadius: 1,
+                                        bgcolor: 'grey.50'
+                                    }}
+                                >
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                            {patient.name[0]}
+                                        </Avatar>
+                                        <Box flex={1}>
+                                            <Typography variant="subtitle1">
+                                                {patient.name}
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Room: {patient.roomNumber}
+                                            </Typography>
+                                        </Box>
                                         <IconButton 
-                                            onClick={() => navigate(`/patients/edit/${patient._id}`)}
                                             size="small"
+                                            onClick={() => navigate(`/patients/view/${patient._id}`)}
                                         >
                                             <EditIcon />
                                         </IconButton>
-                                        <IconButton
-                                            onClick={() => navigate(`/diet-charts/new/${patient._id}`)}
-                                            size="small"
-                                            color="primary"
-                                        >
-                                            <DietIcon />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
+                                    </Box>
+                                </Box>
                             ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+                        </CardContent>
+                    </Card>
+                </Grid>
 
-            {/* Recent Diet Charts */}
-            <Paper sx={{ p: 2 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="h6">Recent Diet Charts</Typography>
-                    <Button
-                        variant="outlined"
-                        onClick={() => navigate('/diet-charts')}
-                    >
-                        View All Diet Charts
-                    </Button>
-                </Box>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Patient</TableCell>
-                                <TableCell>Start Date</TableCell>
-                                <TableCell>End Date</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
+                {/* Recent Diet Charts */}
+                <Grid item xs={12} md={6}>
+                    <Card elevation={3}>
+                        <CardContent>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                <Typography variant="h6" color="primary">
+                                    Recent Diet Charts
+                                </Typography>
+                                <Button 
+                                    size="small" 
+                                    onClick={() => navigate('/diet-charts')}
+                                    endIcon={<TrendingIcon />}
+                                >
+                                    View All
+                                </Button>
+                            </Box>
+                            <Divider sx={{ mb: 2 }} />
                             {dashboardData.recentDietCharts.map((chart) => (
-                                <TableRow key={chart._id}>
-                                    <TableCell>{chart.patient?.name}</TableCell>
-                                    <TableCell>
-                                        {new Date(chart.startDate).toLocaleDateString()}
-                                    </TableCell>
-                                    <TableCell>
-                                        {new Date(chart.endDate).toLocaleDateString()}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip 
-                                            label={chart.status}
-                                            color={chart.status === 'active' ? 'success' : 'default'}
+                                <Box 
+                                    key={chart._id} 
+                                    sx={{ 
+                                        mb: 2, 
+                                        p: 1.5, 
+                                        borderRadius: 1,
+                                        bgcolor: 'grey.50'
+                                    }}
+                                >
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Avatar sx={{ bgcolor: 'success.main' }}>
+                                            <DietIcon />
+                                        </Avatar>
+                                        <Box flex={1}>
+                                            <Typography variant="subtitle1">
+                                                {chart.patient?.name || 'N/A'}
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Created: {new Date(chart.createdAt).toLocaleDateString()}
+                                            </Typography>
+                                        </Box>
+                                        <IconButton 
                                             size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <IconButton
-                                            onClick={() => navigate(`/diet-charts/edit/${chart._id}`)}
-                                            size="small"
+                                            onClick={() => navigate(`/diet-charts/view/${chart._id}`)}
                                         >
                                             <EditIcon />
                                         </IconButton>
-                                    </TableCell>
-                                </TableRow>
+                                    </Box>
+                                </Box>
                             ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* Recent Deliveries */}
+                <Grid item xs={12}>
+                    <Card elevation={3}>
+                        <CardContent>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                <Typography variant="h6" color="primary">
+                                    Recent Deliveries
+                                </Typography>
+                                <Button 
+                                    size="small" 
+                                    onClick={() => navigate('/delivery-management')}
+                                    endIcon={<TrendingIcon />}
+                                >
+                                    View All
+                                </Button>
+                            </Box>
+                            <Divider sx={{ mb: 2 }} />
+                            <Grid container spacing={2}>
+                                {dashboardData.recentDeliveries?.map((delivery) => (
+                                    <Grid item xs={12} md={6} key={delivery._id}>
+                                        <Paper 
+                                            elevation={1}
+                                            sx={{ 
+                                                p: 2,
+                                                bgcolor: 'grey.50'
+                                            }}
+                                        >
+                                            <Box display="flex" alignItems="center" gap={2}>
+                                                <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                                                    <DeliveryIcon />
+                                                </Avatar>
+                                                <Box flex={1}>
+                                                    <Typography variant="subtitle1">
+                                                        {delivery.dietChart?.patient?.name || 'N/A'}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        {delivery.mealType} - Room: {delivery.dietChart?.patient?.roomNumber || 'N/A'}
+                                                    </Typography>
+                                                    <Box display="flex" alignItems="center" gap={1} mt={1}>
+                                                        <Chip
+                                                            label="Delivered"
+                                                            size="small"
+                                                            color="success"
+                                                        />
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {new Date(delivery.deliveryCompletionTime).toLocaleTimeString()}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        </Paper>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
         </Box>
     );
 };

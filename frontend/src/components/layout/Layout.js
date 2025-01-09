@@ -1,90 +1,180 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Drawer,
     AppBar,
     Toolbar,
-    List,
     Typography,
-    Divider,
     IconButton,
+    List,
     ListItem,
     ListItemIcon,
     ListItemText,
+    Divider,
+    Avatar,
+    Menu,
+    MenuItem,
+    useTheme,
+    Collapse
 } from '@mui/material';
 import {
     Menu as MenuIcon,
-    Dashboard,
-    Person,
-    Restaurant,
-    LocalShipping,
-    ExitToApp,
+    Dashboard as DashboardIcon,
+    Person as PersonIcon,
+    Restaurant as DietIcon,
+    Kitchen as PantryIcon,
+    LocalShipping as DeliveryIcon,
+    Assessment as ReportIcon,
+    Settings as SettingsIcon,
+    ExpandLess,
+    ExpandMore,
+    AccountCircle,
+    Logout as LogoutIcon,
+    Assignment as TaskIcon,
+    Group as StaffIcon
 } from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const drawerWidth = 240;
 
 const Layout = ({ children }) => {
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const { user, logout } = useAuth();
+    const theme = useTheme();
     const navigate = useNavigate();
-
-    const menuItems = [
-        {
-            text: 'Dashboard',
-            icon: <Dashboard />,
-            path: '/dashboard',
-            roles: ['admin', 'manager', 'pantry', 'delivery']
-        },
-        {
-            text: 'Patients',
-            icon: <Person />,
-            path: '/patients',
-            roles: ['admin', 'manager']
-        },
-        {
-            text: 'Diet Charts',
-            icon: <Restaurant />,
-            path: '/diet-charts',
-            roles: ['admin', 'manager', 'pantry']
-        }
-    ];
+    const location = useLocation();
+    const { user, logout } = useAuth();
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [menuOpen, setMenuOpen] = useState({});
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
     };
 
+    const handleMenuClick = (key) => {
+        setMenuOpen(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleProfileMenuOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleProfileMenuClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    const isActive = (path) => {
+        return location.pathname === path;
+    };
+
+    const getMenuItems = () => {
+        const menuItems = [];
+
+        if (user?.role === 'manager') {
+            menuItems.push(
+                { path: '/dashboard', icon: <DashboardIcon />, text: 'Dashboard' },
+                {
+                    key: 'patients',
+                    icon: <PersonIcon />,
+                    text: 'Patients',
+                    subItems: [
+                        { path: '/patients', text: 'All Patients' },
+                        { path: '/patients/new', text: 'Add Patient' }
+                    ]
+                },
+                {
+                    key: 'diet-charts',
+                    icon: <DietIcon />,
+                    text: 'Diet Charts',
+                    subItems: [
+                        { path: '/diet-charts', text: 'All Diet Charts' },
+                        { path: '/diet-charts/new', text: 'Create Diet Chart' }
+                    ]
+                },
+                {
+                    key: 'pantry',
+                    icon: <PantryIcon />,
+                    text: 'Pantry',
+                    subItems: [
+                        { path: '/pantry-management', text: 'Manage Pantries' },
+                        { path: '/pantry-staff', text: 'Pantry Staff' }
+                    ]
+                },
+                { path: '/reports', icon: <ReportIcon />, text: 'Reports' }
+            );
+        } else if (user?.role === 'pantry') {
+            menuItems.push(
+                { path: '/pantry-dashboard', icon: <DashboardIcon />, text: 'Dashboard' },
+                { path: '/meal-tasks', icon: <TaskIcon />, text: 'Meal Tasks' },
+                { path: '/delivery-management', icon: <DeliveryIcon />, text: 'Deliveries' }
+            );
+        }
+
+        return menuItems;
+    };
+
     const drawer = (
-        <div>
-            <Toolbar />
+        <Box>
+            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                    {user?.name?.[0] || 'U'}
+                </Avatar>
+                <Box>
+                    <Typography variant="subtitle1">{user?.name}</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                        {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                    </Typography>
+                </Box>
+            </Box>
             <Divider />
             <List>
-                {menuItems.map((item) => (
-                    item.roles.includes(user?.role) && (
-                        <ListItem 
-                            button 
-                            key={item.text}
+                {getMenuItems().map((item) => (
+                    item.subItems ? (
+                        <React.Fragment key={item.key}>
+                            <ListItem button onClick={() => handleMenuClick(item.key)}>
+                                <ListItemIcon>{item.icon}</ListItemIcon>
+                                <ListItemText primary={item.text} />
+                                {menuOpen[item.key] ? <ExpandLess /> : <ExpandMore />}
+                            </ListItem>
+                            <Collapse in={menuOpen[item.key]} timeout="auto" unmountOnExit>
+                                <List component="div" disablePadding>
+                                    {item.subItems.map((subItem) => (
+                                        <ListItem
+                                            button
+                                            key={subItem.path}
+                                            onClick={() => navigate(subItem.path)}
+                                            sx={{
+                                                pl: 4,
+                                                bgcolor: isActive(subItem.path) ? 'action.selected' : 'inherit'
+                                            }}
+                                        >
+                                            <ListItemText primary={subItem.text} />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Collapse>
+                        </React.Fragment>
+                    ) : (
+                        <ListItem
+                            button
+                            key={item.path}
                             onClick={() => navigate(item.path)}
+                            sx={{
+                                bgcolor: isActive(item.path) ? 'action.selected' : 'inherit'
+                            }}
                         >
-                            <ListItemIcon>
-                                {item.icon}
-                            </ListItemIcon>
+                            <ListItemIcon>{item.icon}</ListItemIcon>
                             <ListItemText primary={item.text} />
                         </ListItem>
                     )
                 ))}
             </List>
-            <Divider />
-            <List>
-                <ListItem button onClick={logout}>
-                    <ListItemIcon>
-                        <ExitToApp />
-                    </ListItemIcon>
-                    <ListItemText primary="Logout" />
-                </ListItem>
-            </List>
-        </div>
+        </Box>
     );
 
     return (
@@ -105,11 +195,20 @@ const Layout = ({ children }) => {
                     >
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h6" noWrap component="div">
-                        Hospital Food Management
+                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+                        Hospital Food Service Management
                     </Typography>
+                    <IconButton
+                        size="large"
+                        edge="end"
+                        color="inherit"
+                        onClick={handleProfileMenuOpen}
+                    >
+                        <AccountCircle />
+                    </IconButton>
                 </Toolbar>
             </AppBar>
+
             <Box
                 component="nav"
                 sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -123,10 +222,7 @@ const Layout = ({ children }) => {
                     }}
                     sx={{
                         display: { xs: 'block', sm: 'none' },
-                        '& .MuiDrawer-paper': {
-                            boxSizing: 'border-box',
-                            width: drawerWidth,
-                        },
+                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
                     }}
                 >
                     {drawer}
@@ -135,27 +231,44 @@ const Layout = ({ children }) => {
                     variant="permanent"
                     sx={{
                         display: { xs: 'none', sm: 'block' },
-                        '& .MuiDrawer-paper': {
-                            boxSizing: 'border-box',
-                            width: drawerWidth,
-                        },
+                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
                     }}
                     open
                 >
                     {drawer}
                 </Drawer>
             </Box>
+
             <Box
                 component="main"
                 sx={{
                     flexGrow: 1,
                     p: 3,
                     width: { sm: `calc(100% - ${drawerWidth}px)` },
+                    mt: 8
                 }}
             >
-                <Toolbar />
                 {children}
             </Box>
+
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleProfileMenuClose}
+            >
+                <MenuItem onClick={handleProfileMenuClose}>
+                    <ListItemIcon>
+                        <SettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    Settings
+                </MenuItem>
+                <MenuItem onClick={handleLogout}>
+                    <ListItemIcon>
+                        <LogoutIcon fontSize="small" />
+                    </ListItemIcon>
+                    Logout
+                </MenuItem>
+            </Menu>
         </Box>
     );
 };

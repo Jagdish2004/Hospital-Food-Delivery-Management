@@ -1,36 +1,56 @@
 const mongoose = require('mongoose');
 
 const pantryTaskSchema = new mongoose.Schema({
-    patient: {
+    dietChart: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Patient',
+        ref: 'DietChart',
         required: true
     },
     meal: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'DietChart',
+        required: true
+    },
+    mealType: {
+        type: String,
+        enum: ['Breakfast', 'Lunch', 'Snack', 'Dinner'],
+        required: true
+    },
+    scheduledTime: {
+        type: String,
         required: true
     },
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
-    deliveryPerson: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
     status: {
         type: String,
-        enum: ['pending', 'preparing', 'ready', 'assigned_delivery', 'in_transit', 'delivered'],
+        enum: ['pending', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'],
         default: 'pending'
     },
     preparationStartTime: Date,
     preparationEndTime: Date,
-    deliveryAssignedTime: Date,
     deliveryStartTime: Date,
     deliveryCompletionTime: Date,
+    preparationNotes: String,
     deliveryNotes: String,
-    specialInstructions: String
+    deliveryPerson: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    temperature: Number,
+    qualityCheck: {
+        checked: {
+            type: Boolean,
+            default: false
+        },
+        checkedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        checkedAt: Date,
+        notes: String
+    }
 }, {
     timestamps: true
 });

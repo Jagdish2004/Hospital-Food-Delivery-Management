@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
+    Container,
     Grid,
     Paper,
     Typography,
@@ -9,217 +10,178 @@ import {
     Card,
     CardContent,
     Button,
-    Chip,
+    Divider,
+    Avatar,
     IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Select,
-    MenuItem,
-    FormControl,
-    InputLabel
+    Chip
 } from '@mui/material';
 import {
-    Assignment as AssignmentIcon,
-    LocalShipping as ShippingIcon,
-    Check as CheckIcon
+    Kitchen as KitchenIcon,
+    LocalShipping as DeliveryIcon,
+    Assignment as TaskIcon,
+    RestaurantMenu as MenuIcon,
+    Schedule as ScheduleIcon,
+    TrendingUp as TrendingIcon,
+    Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { getPantryTasks, updateTaskStatus, assignDeliveryPersonnel } from '../../services/api';
-import { toast } from 'react-toastify';
+import MealTracker from './MealTracker';
+import { useNavigate } from 'react-router-dom';
 
 const PantryDashboard = () => {
     const [tabValue, setTabValue] = useState(0);
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-    const [selectedTask, setSelectedTask] = useState(null);
-    const [selectedDeliveryPerson, setSelectedDeliveryPerson] = useState('');
-    const [deliveryStaff, setDeliveryStaff] = useState([]); // This should be fetched from API
+    const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchTasks();
-    }, []);
-
-    const fetchTasks = async () => {
-        try {
-            const response = await getPantryTasks();
-            setTasks(response.data);
-        } catch (error) {
-            toast.error('Error fetching tasks');
-        } finally {
-            setLoading(false);
-        }
+    const handleTabChange = (event, newValue) => {
+        setTabValue(newValue);
     };
-
-    const handleStatusChange = async (taskId, newStatus) => {
-        try {
-            await updateTaskStatus(taskId, newStatus);
-            toast.success('Task status updated');
-            fetchTasks();
-        } catch (error) {
-            toast.error('Error updating task status');
-        }
-    };
-
-    const handleAssignDelivery = async () => {
-        try {
-            await assignDeliveryPersonnel(selectedTask._id, selectedDeliveryPerson);
-            toast.success('Delivery personnel assigned successfully');
-            setAssignDialogOpen(false);
-            fetchTasks();
-        } catch (error) {
-            toast.error('Error assigning delivery personnel');
-        }
-    };
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'pending':
-                return 'warning';
-            case 'preparing':
-                return 'info';
-            case 'ready':
-                return 'success';
-            case 'delivered':
-                return 'default';
-            default:
-                return 'default';
-        }
-    };
-
-    const renderTaskCard = (task) => (
-        <Card key={task._id} sx={{ mb: 2 }}>
-            <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">
-                        Room {task.dietChart.patient.roomNumber}
-                    </Typography>
-                    <Chip
-                        label={task.status}
-                        color={getStatusColor(task.status)}
-                        size="small"
-                    />
-                </Box>
-                <Typography>
-                    <strong>Patient:</strong> {task.dietChart.patient.name}
-                </Typography>
-                <Typography>
-                    <strong>Meal Type:</strong> {task.meal.type}
-                </Typography>
-                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                    {task.status === 'pending' && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() => handleStatusChange(task._id, 'preparing')}
-                            startIcon={<AssignmentIcon />}
-                        >
-                            Start Preparation
-                        </Button>
-                    )}
-                    {task.status === 'preparing' && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            onClick={() => handleStatusChange(task._id, 'ready')}
-                            startIcon={<CheckIcon />}
-                        >
-                            Mark Ready
-                        </Button>
-                    )}
-                    {task.status === 'ready' && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            onClick={() => {
-                                setSelectedTask(task);
-                                setAssignDialogOpen(true);
-                            }}
-                            startIcon={<ShippingIcon />}
-                        >
-                            Assign Delivery
-                        </Button>
-                    )}
-                </Box>
-            </CardContent>
-        </Card>
-    );
 
     return (
-        <Box>
-            <Typography variant="h4" gutterBottom>
-                Pantry Dashboard
-            </Typography>
-            <Paper sx={{ mb: 3 }}>
-                <Tabs
-                    value={tabValue}
-                    onChange={(_, newValue) => setTabValue(newValue)}
+        <Container maxWidth="lg">
+            <Box p={3}>
+                {/* Header Section */}
+                <Paper 
+                    elevation={3} 
+                    sx={{ 
+                        p: 3, 
+                        mb: 4, 
+                        background: 'linear-gradient(45deg, #2e7d32 30%, #4caf50 90%)',
+                        color: 'white'
+                    }}
                 >
-                    <Tab label="Pending" />
-                    <Tab label="In Progress" />
-                    <Tab label="Ready for Delivery" />
-                    <Tab label="Completed" />
-                </Tabs>
-            </Paper>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box display="flex" alignItems="center" gap={2}>
+                            <KitchenIcon sx={{ fontSize: 40 }} />
+                            <Box>
+                                <Typography variant="h4">Pantry Dashboard</Typography>
+                                <Typography variant="subtitle1">
+                                    Manage meal preparation and delivery tasks
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Box display="flex" gap={2}>
+                            <Button
+                                variant="contained"
+                                startIcon={<RefreshIcon />}
+                                onClick={() => window.location.reload()}
+                                sx={{ 
+                                    bgcolor: 'white', 
+                                    color: '#2e7d32',
+                                    '&:hover': {
+                                        bgcolor: '#e8f5e9',
+                                    }
+                                }}
+                            >
+                                Refresh Tasks
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<DeliveryIcon />}
+                                onClick={() => navigate('/delivery-management')}
+                                sx={{ 
+                                    bgcolor: 'white', 
+                                    color: '#2e7d32',
+                                    '&:hover': {
+                                        bgcolor: '#e8f5e9',
+                                    }
+                                }}
+                            >
+                                Delivery Status
+                            </Button>
+                        </Box>
+                    </Box>
+                </Paper>
 
-            <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    {loading ? (
-                        <Typography>Loading tasks...</Typography>
-                    ) : (
-                        tasks
-                            .filter(task => {
-                                switch (tabValue) {
-                                    case 0:
-                                        return task.status === 'pending';
-                                    case 1:
-                                        return task.status === 'preparing';
-                                    case 2:
-                                        return task.status === 'ready';
-                                    case 3:
-                                        return task.status === 'delivered';
-                                    default:
-                                        return false;
-                                }
-                            })
-                            .map(renderTaskCard)
-                    )}
+                {/* Quick Stats */}
+                <Grid container spacing={3} mb={4}>
+                    <Grid item xs={12} md={3}>
+                        <Card elevation={3}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <MenuIcon sx={{ fontSize: 40, color: '#2e7d32', mb: 1 }} />
+                                <Typography variant="h4" color="success.main" id="pending-tasks">
+                                    0
+                                </Typography>
+                                <Typography variant="subtitle1" color="textSecondary">
+                                    Pending Tasks
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                        <Card elevation={3}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <ScheduleIcon sx={{ fontSize: 40, color: '#ed6c02', mb: 1 }} />
+                                <Typography variant="h4" color="warning.main" id="preparing-tasks">
+                                    0
+                                </Typography>
+                                <Typography variant="subtitle1" color="textSecondary">
+                                    In Preparation
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                        <Card elevation={3}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <TaskIcon sx={{ fontSize: 40, color: '#0288d1', mb: 1 }} />
+                                <Typography variant="h4" color="info.main" id="ready-tasks">
+                                    0
+                                </Typography>
+                                <Typography variant="subtitle1" color="textSecondary">
+                                    Ready for Delivery
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                        <Card elevation={3}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <DeliveryIcon sx={{ fontSize: 40, color: '#2e7d32', mb: 1 }} />
+                                <Typography variant="h4" color="success.main" id="delivered-tasks">
+                                    0
+                                </Typography>
+                                <Typography variant="subtitle1" color="textSecondary">
+                                    Delivered Today
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
                 </Grid>
-            </Grid>
 
-            {/* Assign Delivery Dialog */}
-            <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)}>
-                <DialogTitle>Assign Delivery Personnel</DialogTitle>
-                <DialogContent>
-                    <FormControl fullWidth sx={{ mt: 2 }}>
-                        <InputLabel>Select Delivery Staff</InputLabel>
-                        <Select
-                            value={selectedDeliveryPerson}
-                            onChange={(e) => setSelectedDeliveryPerson(e.target.value)}
+                {/* Task Management Section */}
+                <Paper elevation={3} sx={{ mb: 3 }}>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                        <Tabs
+                            value={tabValue}
+                            onChange={handleTabChange}
+                            indicatorColor="primary"
+                            textColor="primary"
+                            sx={{
+                                '& .MuiTab-root': {
+                                    minHeight: '64px',
+                                    fontSize: '1rem'
+                                }
+                            }}
                         >
-                            {deliveryStaff.map((staff) => (
-                                <MenuItem key={staff._id} value={staff._id}>
-                                    {staff.name}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleAssignDelivery}
-                        disabled={!selectedDeliveryPerson}
-                    >
-                        Assign
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+                            <Tab 
+                                icon={<TaskIcon />} 
+                                label="All Tasks" 
+                                iconPosition="start"
+                            />
+                            <Tab 
+                                icon={<AssignmentIcon />} 
+                                label="My Tasks" 
+                                iconPosition="start"
+                            />
+                        </Tabs>
+                    </Box>
+                    
+                    <Box sx={{ p: 2 }}>
+                        {tabValue === 0 && <MealTracker showAllTasks />}
+                        {tabValue === 1 && <MealTracker showMyTasks />}
+                    </Box>
+                </Paper>
+            </Box>
+        </Container>
     );
 };
 
