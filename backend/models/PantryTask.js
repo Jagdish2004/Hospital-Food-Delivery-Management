@@ -1,34 +1,36 @@
 const mongoose = require('mongoose');
 
 const pantryTaskSchema = new mongoose.Schema({
-    dietChart: {
+    patient: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'DietChart',
+        ref: 'Patient',
         required: true
     },
     meal: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'DietChart',
         required: true
     },
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'User'
+    },
+    deliveryPerson: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     },
     status: {
         type: String,
-        enum: ['pending', 'preparing', 'ready', 'assigned_delivery', 'delivered'],
+        enum: ['pending', 'preparing', 'ready', 'assigned_delivery', 'in_transit', 'delivered'],
         default: 'pending'
     },
     preparationStartTime: Date,
     preparationEndTime: Date,
-    deliveryAssignedTo: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
+    deliveryAssignedTime: Date,
     deliveryStartTime: Date,
     deliveryCompletionTime: Date,
-    notes: String
+    deliveryNotes: String,
+    specialInstructions: String
 }, {
     timestamps: true
 });

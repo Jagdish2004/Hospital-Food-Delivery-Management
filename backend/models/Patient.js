@@ -5,15 +5,6 @@ const patientSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    age: {
-        type: Number,
-        required: true
-    },
-    gender: {
-        type: String,
-        required: true,
-        enum: ['male', 'female', 'other']
-    },
     roomNumber: {
         type: String,
         required: true
@@ -22,46 +13,34 @@ const patientSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    floorNumber: {
-        type: String,
+    age: {
+        type: Number,
         required: true
     },
-    diseases: [{
+    gender: {
         type: String,
+        enum: ['male', 'female', 'other'],
         required: true
-    }],
-    allergies: [{
-        type: String
-    }],
+    },
     contactNumber: {
         type: String,
         required: true
     },
     emergencyContact: {
-        name: {
-            type: String,
-            required: true
-        },
-        relation: {
-            type: String,
-            required: true
-        },
-        phone: {
-            type: String,
-            required: true
-        }
+        name: String,
+        relationship: String,
+        phone: String
     },
-    dietaryRestrictions: [{
-        type: String
-    }],
-    status: {
-        type: String,
-        enum: ['active', 'discharged'],
-        default: 'active'
+    dietaryRestrictions: [String],
+    allergies: [String],
+    diagnosis: String,
+    admissionDate: {
+        type: Date,
+        default: Date.now
     },
-    currentDietChart: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'DietChart'
+    active: {
+        type: Boolean,
+        default: true
     }
 }, {
     timestamps: true

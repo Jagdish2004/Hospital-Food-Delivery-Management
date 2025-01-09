@@ -26,8 +26,15 @@ const Signup = () => {
         password: '',
         confirmPassword: '',
         role: 'delivery',
-        contact: ''
+        contactNumber: '',
+        department: ''
     });
+
+    const roles = [
+        { value: 'manager', label: 'Food Service Manager' },
+        { value: 'pantry', label: 'Pantry Staff' },
+        { value: 'delivery', label: 'Delivery Personnel' }
+    ];
 
     const handleChange = (e) => {
         setFormData({
@@ -45,8 +52,9 @@ const Signup = () => {
 
         setLoading(true);
         try {
-            const response = await register(formData);
-            login(response.data);
+            const { confirmPassword, ...signupData } = formData;
+            const response = await register(signupData);
+            login(response.data.token, response.data.user);
             toast.success('Registration successful!');
             navigate('/dashboard');
         } catch (error) {
@@ -111,17 +119,28 @@ const Signup = () => {
                             onChange={handleChange}
                             label="Role"
                         >
-                            <MenuItem value="delivery">Delivery Staff</MenuItem>
-                            <MenuItem value="pantry">Pantry Staff</MenuItem>
+                            {roles.map((role) => (
+                                <MenuItem key={role.value} value={role.value}>
+                                    {role.label}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </FormControl>
                     <TextField
                         margin="normal"
                         required
                         fullWidth
-                        name="contact"
+                        name="contactNumber"
                         label="Contact Number"
-                        value={formData.contact}
+                        value={formData.contactNumber}
+                        onChange={handleChange}
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        name="department"
+                        label="Department"
+                        value={formData.department}
                         onChange={handleChange}
                     />
                     <Button

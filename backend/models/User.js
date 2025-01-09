@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        lowercase: true
     },
     password: {
         type: String,
@@ -17,12 +18,18 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'pantry', 'delivery'],
+        required: true,
+        enum: ['admin', 'manager', 'pantry', 'delivery'],
         default: 'delivery'
     },
-    contact: {
+    contactNumber: {
         type: String,
         required: true
+    },
+    department: String,
+    active: {
+        type: Boolean,
+        default: true
     }
 }, {
     timestamps: true
@@ -31,7 +38,7 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) {
-        next();
+        return next();
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     Box,
@@ -29,6 +29,7 @@ import PantryDashboard from '../dashboard/PantryDashboard';
 import DeliveryDashboard from '../dashboard/DeliveryDashboard';
 import PatientList from '../patients/PatientList';
 import PatientForm from '../patients/PatientForm';
+import ManagerDashboard from '../dashboard/ManagerDashboard';
 
 const drawerWidth = 240;
 
@@ -36,6 +37,14 @@ const Layout = () => {
     const [mobileOpen, setMobileOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+
+    console.log('Layout - Current user:', user); // Debug log
+
+    useEffect(() => {
+        if (!user) {
+            navigate('/login');
+        }
+    }, [user, navigate]);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -51,19 +60,19 @@ const Layout = () => {
             text: 'Dashboard',
             icon: <Dashboard />,
             path: '/dashboard',
-            roles: ['admin', 'pantry', 'delivery']
+            roles: ['admin', 'manager', 'pantry', 'delivery']
         },
         {
             text: 'Patients',
             icon: <Person />,
             path: '/patients',
-            roles: ['admin']
+            roles: ['admin', 'manager']
         },
         {
             text: 'Diet Charts',
             icon: <Restaurant />,
             path: '/diet-charts',
-            roles: ['admin', 'pantry']
+            roles: ['admin', 'manager', 'pantry']
         },
         {
             text: 'Deliveries',
@@ -106,6 +115,28 @@ const Layout = () => {
             </List>
         </div>
     );
+
+    const getDashboardComponent = () => {
+        console.log('Getting dashboard for role:', user?.role); // Debug log
+        
+        if (!user) {
+            return <Navigate to="/login" />;
+        }
+
+        switch (user.role) {
+            case 'admin':
+                return <AdminDashboard />;
+            case 'manager':
+                return <ManagerDashboard />;
+            case 'pantry':
+                return <PantryDashboard />;
+            case 'delivery':
+                return <DeliveryDashboard />;
+            default:
+                console.log('No matching role found, redirecting to login'); // Debug log
+                return <Navigate to="/login" />;
+        }
+    };
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -174,15 +205,7 @@ const Layout = () => {
                 <Routes>
                     <Route
                         path="/dashboard"
-                        element={
-                            user?.role === 'admin' ? (
-                                <AdminDashboard />
-                            ) : user?.role === 'pantry' ? (
-                                <PantryDashboard />
-                            ) : (
-                                <DeliveryDashboard />
-                            )
-                        }
+                        element={getDashboardComponent()}
                     />
                     <Route path="/patients" element={<PatientList />} />
                     <Route path="/patients/new" element={<PatientForm />} />

@@ -3,107 +3,186 @@ import {
     Grid,
     Paper,
     Typography,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemSecondaryAction,
+    Box,
+    Card,
+    CardContent,
     Button,
-    Chip,
-    Box
+    Tabs,
+    Tab,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Chip
 } from '@mui/material';
-import { LocalShipping, CheckCircle } from '@mui/icons-material';
+import {
+    LocalShipping,
+    CheckCircle,
+    Schedule
+} from '@mui/icons-material';
+import { toast } from 'react-toastify';
+import { getDeliveryTasks, updateDeliveryStatus } from '../../services/api';
 
 const DeliveryDashboard = () => {
-    const [deliveries, setDeliveries] = useState([]);
-    const [completedDeliveries, setCompletedDeliveries] = useState([]);
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [tabValue, setTabValue] = useState(0);
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [deliveryNotes, setDeliveryNotes] = useState('');
+    const [completeDialog, setCompleteDialog] = useState(false);
 
     useEffect(() => {
-        // Fetch assigned deliveries
-        // Add API integration here
-        setDeliveries([
-            {
-                id: 1,
-                roomNumber: '301',
-                patientName: 'John Doe',
-                mealType: 'Lunch',
-                status: 'ready'
-            },
-            // Add more mock data
-        ]);
+        fetchTasks();
+        // Refresh tasks every 2 minutes
+        const interval = setInterval(fetchTasks, 120000);
+        return () => clearInterval(interval);
     }, []);
 
-    const handleDeliveryComplete = async (deliveryId) => {
+    const fetchTasks = async () => {
         try {
-            // API call to mark delivery as complete
-            const updatedDelivery = deliveries.find(d => d.id === deliveryId);
-            setCompletedDeliveries([...completedDeliveries, updatedDelivery]);
-            setDeliveries(deliveries.filter(d => d.id !== deliveryId));
+            const response = await getDeliveryTasks();
+            setTasks(response.data);
         } catch (error) {
-            console.error('Error completing delivery:', error);
+            toast.error('Error fetching delivery tasks');
+        } finally {
+            setLoading(false);
         }
     };
 
+    const handleStatusUpdate = async (taskId, status) => {
+        try {
+            await updateDeliveryStatus(taskId, status, deliveryNotes);
+            toast.success('Delivery status updated successfully');
+            setCompleteDialog(false);
+            setSelectedTask(null);
+            setDeliveryNotes('');
+            fetchTasks();
+        } catch (error) {
+            toast.error('Error updating delivery status');
+        }
+    };
+
+    const openCompleteDialog = (task) => {
+        setSelectedTask(task);
+        setCompleteDialog(true);
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'assigned':
+                return 'warning';
+            case 'in_transit':
+                return 'info';
+            case 'delivered':
+                return 'success';
+            default:
+                return 'default';
+        }
+    };
+
+    const renderTaskCard = (task) => (
+        <Grid item xs={12} md={6} key={task._id}>
+            <Card>
+                <CardContent>
+                    <Typography variant="h6">
+                        Patient: {task.patient.name}
+                    </Typography>
+                    <Typography color="textSecondary">
+                        Room: {task.patient.roomNumber} | Bed: {task.patient.bedNumber}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                        Meal Type: {task.meal.type}
+                    </Typography>
+                    <Box sx={{ mt: 2 }}>
+                        <Chip
+                            label={task.status}
+                            color={getStatusColor(task.status)}
+                            sx={{ mr: 1 }}
+                        />
+                        {task.status === 'assigned' && (
+                            <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => handleStatusUpdate(task._id, 'in_transit')}
+                                startIcon={<LocalShipping />}
+                            >
+                                Start Delivery
+                            </Button>
+                        )}
+                        {task.status === 'in_transit' && (
+                            <Button
+                                size="small"
+                                variant="contained"
+                                color="success"
+                                onClick={() => openCompleteDialog(task)}
+                                startIcon={<CheckCircle />}
+                            >
+                                Complete Delivery
+                            </Button>
+                        )}
+                    </Box>
+                </CardContent>
+            </Card>
+        </Grid>
+    );
+
     return (
-        <div>
+        <Box>
             <Typography variant="h4" gutterBottom>
                 Delivery Dashboard
             </Typography>
+
+            <Paper sx={{ mb: 3 }}>
+                <Tabs
+                    value={tabValue}
+                    onChange={(e, newValue) => setTabValue(newValue)}
+                    sx={{ borderBottom: 1, borderColor: 'divider' }}
+                >
+                    <Tab label="Assigned" />
+                    <Tab label="In Transit" />
+                    <Tab label="Delivered" />
+                </Tabs>
+            </Paper>
+
             <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <LocalShipping color="primary" sx={{ mr: 1 }} />
-                            <Typography variant="h6">
-                                Pending Deliveries
-                            </Typography>
-                        </Box>
-                        <List>
-                            {deliveries.map((delivery) => (
-                                <ListItem key={delivery.id}>
-                                    <ListItemText
-                                        primary={`Room ${delivery.roomNumber} - ${delivery.patientName}`}
-                                        secondary={`Meal: ${delivery.mealType}`}
-                                    />
-                                    <ListItemSecondaryAction>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            size="small"
-                                            onClick={() => handleDeliveryComplete(delivery.id)}
-                                            startIcon={<CheckCircle />}
-                                        >
-                                            Mark Delivered
-                                        </Button>
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Paper>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 2 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Completed Deliveries
-                        </Typography>
-                        <List>
-                            {completedDeliveries.map((delivery) => (
-                                <ListItem key={delivery.id}>
-                                    <ListItemText
-                                        primary={`Room ${delivery.roomNumber} - ${delivery.patientName}`}
-                                        secondary={`Meal: ${delivery.mealType}`}
-                                    />
-                                    <Chip
-                                        label="Delivered"
-                                        color="success"
-                                        icon={<CheckCircle />}
-                                    />
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Paper>
-                </Grid>
+                {tasks
+                    .filter(task => {
+                        if (tabValue === 0) return task.status === 'assigned';
+                        if (tabValue === 1) return task.status === 'in_transit';
+                        return task.status === 'delivered';
+                    })
+                    .map(renderTaskCard)}
             </Grid>
-        </div>
+
+            {/* Complete Delivery Dialog */}
+            <Dialog open={completeDialog} onClose={() => setCompleteDialog(false)}>
+                <DialogTitle>Complete Delivery</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        margin="normal"
+                        label="Delivery Notes"
+                        value={deliveryNotes}
+                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                        placeholder="Add any notes about the delivery..."
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setCompleteDialog(false)}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleStatusUpdate(selectedTask?._id, 'delivered')}
+                        disabled={!deliveryNotes.trim()}
+                    >
+                        Complete Delivery
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
     );
 };
 

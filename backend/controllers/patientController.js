@@ -30,7 +30,7 @@ const getPatientById = async (req, res) => {
 
 // @desc    Create patient
 // @route   POST /api/patients
-// @access  Private/Admin
+// @access  Private
 const createPatient = async (req, res) => {
     try {
         const patient = await Patient.create(req.body);
@@ -42,7 +42,7 @@ const createPatient = async (req, res) => {
 
 // @desc    Update patient
 // @route   PUT /api/patients/:id
-// @access  Private/Admin
+// @access  Private
 const updatePatient = async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.id);

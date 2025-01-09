@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { login } from '../../services/api';
+import { useNavigate, Link } from 'react-router-dom';
 import {
     Container,
     Paper,
     TextField,
     Button,
     Typography,
-    Box
+    Box,
+    Alert
 } from '@mui/material';
+import { login as loginApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const Login = () => {
+    const navigate = useNavigate();
+    const { login: authLogin } = useAuth();
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
-    const { login: authLogin } = useAuth();
 
     const handleChange = (e) => {
         setFormData({
@@ -29,12 +31,26 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
+
         try {
-            const response = await login(formData);
-            authLogin(response.data);
-            navigate('/dashboard');
+            const response = await loginApi(formData);
+            console.log('Login response:', response.data); // Debug log
+            
+            // Store user data and token
+            authLogin(response.data.token, response.data.user);
+            
+            toast.success('Login successful!');
+            
+            // Delay navigation slightly to ensure context is updated
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 100);
         } catch (error) {
-            setError(error.response?.data?.message || 'An error occurred');
+            console.error('Login error:', error);
+            toast.error(error.response?.data?.message || 'Login failed');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -42,22 +58,16 @@ const Login = () => {
         <Container component="main" maxWidth="xs">
             <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
                 <Typography component="h1" variant="h5" align="center">
-                    Login
+                    Sign In
                 </Typography>
-                {error && (
-                    <Typography color="error" align="center" sx={{ mt: 2 }}>
-                        {error}
-                    </Typography>
-                )}
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
                     <TextField
                         margin="normal"
                         required
                         fullWidth
-                        id="email"
                         label="Email Address"
                         name="email"
-                        autoComplete="email"
+                        type="email"
                         autoFocus
                         value={formData.email}
                         onChange={handleChange}
@@ -66,11 +76,9 @@ const Login = () => {
                         margin="normal"
                         required
                         fullWidth
-                        name="password"
                         label="Password"
+                        name="password"
                         type="password"
-                        id="password"
-                        autoComplete="current-password"
                         value={formData.password}
                         onChange={handleChange}
                     />
@@ -79,16 +87,17 @@ const Login = () => {
                         fullWidth
                         variant="contained"
                         sx={{ mt: 3, mb: 2 }}
+                        disabled={loading}
                     >
-                        Sign In
+                        {loading ? 'Signing in...' : 'Sign In'}
                     </Button>
-                    <Button
-                        fullWidth
-                        variant="text"
-                        onClick={() => navigate('/signup')}
-                    >
-                        Don't have an account? Sign up
-                    </Button>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Link to="/signup" style={{ textDecoration: 'none' }}>
+                            <Typography variant="body2" color="primary">
+                                Don't have an account? Sign up
+                            </Typography>
+                        </Link>
+                    </Box>
                 </Box>
             </Paper>
         </Container>

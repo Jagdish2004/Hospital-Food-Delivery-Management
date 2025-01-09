@@ -1,13 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import ProtectedRoute from './components/routing/ProtectedRoute';
-import Home from './components/home/Home';
+import Layout from './components/layout/Layout';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
-import Layout from './components/layout/Layout';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -26,9 +25,9 @@ function App() {
             <AuthProvider>
                 <Router>
                     <Routes>
-                        <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/signup" element={<Signup />} />
+                        <Route path="/" element={<Navigate to="/dashboard" />} />
                         <Route
                             path="/*"
                             element={
