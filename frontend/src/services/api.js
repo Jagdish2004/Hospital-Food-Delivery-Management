@@ -54,14 +54,35 @@ export const getPatients = () => api.get('/patients');
 export const getPatientById = (id) => api.get(`/patients/${id}`);
 export const createPatient = (patientData) => api.post('/patients', patientData);
 export const updatePatient = (id, patientData) => api.put(`/patients/${id}`, patientData);
+export const deletePatient = (id) => api.delete(`/patients/${id}`);
 
 // Diet chart endpoints
 export const getDietCharts = () => api.get('/diet-charts');
 export const getDietChartById = (id) => api.get(`/diet-charts/${id}`);
 export const createDietChart = (data) => api.post('/diet-charts', data);
-export const updateDietChart = (id, data) => api.put(`/diet-charts/${id}`, data);
+export const updateDietChart = async (id, data) => {
+    try {
+        console.log('Updating diet chart with data:', data);
+        const response = await api.put(`/diet-charts/${id}`, {
+            ...data,
+            patient: data.patient,
+            meals: data.meals.map(meal => ({
+                type: meal.type,
+                time: meal.time,
+                items: meal.items,
+                calories: meal.calories,
+                specialInstructions: meal.specialInstructions
+            }))
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating diet chart:', error);
+        throw error;
+    }
+};
 export const updateMealStatus = (chartId, mealId, status) => 
     api.put(`/diet-charts/${chartId}/meals/${mealId}`, { status });
+export const deleteDietChart = (id) => api.delete(`/diet-charts/${id}`);
 
 // Pantry endpoints
 export const getPantryTasks = () => api.get('/api/pantry/tasks');
@@ -83,11 +104,17 @@ export const getPantryStaff = () => api.get('/api/users/pantry-staff');
 // Manager specific endpoints
 export const getManagerStats = async () => {
     try {
+        console.log('Fetching manager stats...');
         const response = await api.get('/manager/dashboard-stats');
-        console.log('API Response:', response);
-        return response;
+        console.log('Manager stats raw response:', response);
+
+        if (!response.data) {
+            throw new Error('No data received from server');
+        }
+
+        return response.data;
     } catch (error) {
-        console.error('API Error in getManagerStats:', error);
+        console.error('Error in getManagerStats:', error);
         throw error;
     }
 };

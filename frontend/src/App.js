@@ -16,6 +16,9 @@ import ManagerDashboard from './components/dashboard/ManagerDashboard';
 import PantryDashboard from './components/dashboard/PantryDashboard';
 import DeliveryDashboard from './components/dashboard/DeliveryDashboard';
 import DietChartForm from './components/diet-charts/DietChartForm';
+import DietChartList from './components/diet-charts/DietChartList';
+import PatientView from './components/patients/PatientView';
+import DietChartView from './components/diet-charts/DietChartView';
 
 const theme = createTheme({
     palette: {
@@ -63,8 +66,12 @@ function App() {
                                             <Route path="/patients" element={<PatientList />} />
                                             <Route path="/patients/new" element={<PatientForm />} />
                                             <Route path="/patients/edit/:id" element={<PatientForm />} />
+                                            <Route path="/patients/view/:id" element={<PatientView />} />
+                                            <Route path="/diet-charts" element={<DietChartList />} />
+                                            <Route path="/diet-charts/new" element={<DietChartForm />} />
                                             <Route path="/diet-charts/new/:patientId" element={<DietChartForm />} />
                                             <Route path="/diet-charts/edit/:chartId" element={<DietChartForm />} />
+                                            <Route path="/diet-charts/view/:id" element={<DietChartView />} />
                                         </Routes>
                                     </Layout>
                                 </ProtectedRoute>

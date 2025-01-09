@@ -1,50 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+    Container,
     Paper,
+    Typography,
+    Box,
     Grid,
     TextField,
     Button,
-    Typography,
-    Box,
-    Autocomplete,
     FormControl,
     InputLabel,
     Select,
     MenuItem,
-    IconButton
+    IconButton,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemSecondaryAction,
+    Divider
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { createDietChart, getDietChartById, updateDietChart, getPatients } from '../../services/api';
+import { DatePicker } from '@mui/x-date-pickers';
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { createDietChart, updateDietChart, getDietChartById, getPatients } from '../../services/api';
 import { toast } from 'react-toastify';
 
-const initialMeal = {
-    type: '',
-    items: [{ name: '', quantity: '', specialInstructions: '' }],
-    specialInstructions: []
-};
-
-const mealTypes = ['breakfast', 'lunch', 'dinner'];
+const MEAL_TYPES = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
 const DietChartForm = () => {
-    const { id } = useParams();
     const navigate = useNavigate();
+    const { chartId, patientId } = useParams();
     const [loading, setLoading] = useState(false);
     const [patients, setPatients] = useState([]);
     const [formData, setFormData] = useState({
-        patientId: '',
-        startDate: '',
-        endDate: '',
-        meals: [{ ...initialMeal }],
-        restrictions: []
+        patient: patientId || '',
+        startDate: null,
+        endDate: null,
+        meals: [],
+        specialInstructions: '',
+        status: 'active'
+    });
+
+    // New state for meal form
+    const [mealForm, setMealForm] = useState({
+        type: '',
+        time: '',
+        items: '',
+        calories: '',
+        specialInstructions: ''
     });
 
     useEffect(() => {
         fetchPatients();
-        if (id) {
+        if (chartId) {
             fetchDietChart();
         }
-    }, [id]);
+    }, [chartId]);
 
     const fetchPatients = async () => {
         try {
@@ -57,254 +67,306 @@ const DietChartForm = () => {
 
     const fetchDietChart = async () => {
         try {
-            const response = await getDietChartById(id);
-            const { patient, startDate, endDate, meals, restrictions } = response.data;
+            const response = await getDietChartById(chartId);
+            console.log('Fetched diet chart:', response.data);
+            
             setFormData({
-                patientId: patient._id,
-                startDate: startDate.split('T')[0],
-                endDate: endDate.split('T')[0],
-                meals,
-                restrictions
+                ...response.data,
+                patient: response.data.patient._id,
+                startDate: response.data.startDate ? new Date(response.data.startDate) : null,
+                endDate: response.data.endDate ? new Date(response.data.endDate) : null,
+                meals: response.data.meals.map(meal => ({
+                    ...meal,
+                    id: meal._id || Date.now()
+                }))
             });
         } catch (error) {
+            console.error('Error fetching diet chart:', error);
             toast.error('Error fetching diet chart');
+            navigate('/diet-charts');
         }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleMealFormChange = (e) => {
+        const { name, value } = e.target;
+        setMealForm(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const addMeal = () => {
+        if (!mealForm.type || !mealForm.time || !mealForm.items) {
+            toast.error('Please fill in all required meal fields');
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            meals: [...prev.meals, { ...mealForm, id: Date.now() }]
+        }));
+
+        setMealForm({
+            type: '',
+            time: '',
+            items: '',
+            calories: '',
+            specialInstructions: ''
+        });
+    };
+
+    const removeMeal = (mealId) => {
+        setFormData(prev => ({
+            ...prev,
+            meals: prev.meals.filter(meal => meal.id !== mealId)
+        }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
+        if (!formData.patient || !formData.startDate || !formData.endDate) {
+            toast.error('Please fill in all required fields');
+            return;
+        }
+
+        if (formData.meals.length === 0) {
+            toast.error('Please add at least one meal');
+            return;
+        }
+
         try {
-            if (id) {
-                await updateDietChart(id, formData);
+            setLoading(true);
+            const dataToSubmit = {
+                ...formData,
+                patient: formData.patient,
+                meals: formData.meals.map(meal => ({
+                    type: meal.type,
+                    time: meal.time,
+                    items: meal.items,
+                    calories: meal.calories,
+                    specialInstructions: meal.specialInstructions
+                }))
+            };
+
+            console.log('Submitting data:', dataToSubmit);
+
+            if (chartId) {
+                await updateDietChart(chartId, dataToSubmit);
                 toast.success('Diet chart updated successfully');
             } else {
-                await createDietChart(formData);
+                await createDietChart(dataToSubmit);
                 toast.success('Diet chart created successfully');
             }
             navigate('/diet-charts');
         } catch (error) {
+            console.error('Error saving diet chart:', error);
             toast.error(error.response?.data?.message || 'Error saving diet chart');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleMealChange = (index, field, value) => {
-        const updatedMeals = [...formData.meals];
-        updatedMeals[index] = {
-            ...updatedMeals[index],
-            [field]: value
-        };
-        setFormData({ ...formData, meals: updatedMeals });
-    };
-
-    const addMeal = () => {
-        setFormData({
-            ...formData,
-            meals: [...formData.meals, { ...initialMeal }]
-        });
-    };
-
-    const removeMeal = (index) => {
-        const updatedMeals = formData.meals.filter((_, i) => i !== index);
-        setFormData({ ...formData, meals: updatedMeals });
-    };
-
-    const handleMealItemChange = (mealIndex, itemIndex, field, value) => {
-        const updatedMeals = [...formData.meals];
-        updatedMeals[mealIndex].items[itemIndex] = {
-            ...updatedMeals[mealIndex].items[itemIndex],
-            [field]: value
-        };
-        setFormData({ ...formData, meals: updatedMeals });
-    };
-
-    const addMealItem = (mealIndex) => {
-        const updatedMeals = [...formData.meals];
-        updatedMeals[mealIndex].items.push({ name: '', quantity: '', specialInstructions: '' });
-        setFormData({ ...formData, meals: updatedMeals });
-    };
-
-    const removeMealItem = (mealIndex, itemIndex) => {
-        const updatedMeals = [...formData.meals];
-        updatedMeals[mealIndex].items = updatedMeals[mealIndex].items.filter((_, i) => i !== itemIndex);
-        setFormData({ ...formData, meals: updatedMeals });
-    };
-
     return (
-        <Paper sx={{ p: 3 }}>
-            <Typography variant="h5" gutterBottom>
-                {id ? 'Edit Diet Chart' : 'Create Diet Chart'}
-            </Typography>
-            <Box component="form" onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
-                    {/* Form fields */}
-                    <Grid item xs={12} md={6}>
-                        <FormControl fullWidth>
-                            <InputLabel>Patient</InputLabel>
-                            <Select
-                                value={formData.patientId}
-                                onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                                required
-                            >
-                                {patients.map((patient) => (
-                                    <MenuItem key={patient._id} value={patient._id}>
-                                        {`${patient.name} - Room ${patient.roomNumber}`}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            fullWidth
-                            type="date"
-                            label="Start Date"
-                            value={formData.startDate}
-                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                            InputLabelProps={{ shrink: true }}
-                            required
-                        />
-                    </Grid>
-                    {/* Meals Section */}
-                    <Grid item xs={12}>
-                        <Typography variant="h6" gutterBottom>
-                            Meals
-                        </Typography>
-                        {formData.meals.map((meal, mealIndex) => (
-                            <Box key={mealIndex} sx={{ mb: 4, p: 2, border: '1px solid #eee', borderRadius: 1 }}>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={6}>
-                                        <FormControl fullWidth>
-                                            <InputLabel>Meal Type</InputLabel>
-                                            <Select
-                                                value={meal.type}
-                                                onChange={(e) => handleMealChange(mealIndex, 'type', e.target.value)}
-                                                required
-                                            >
-                                                {mealTypes.map((type) => (
-                                                    <MenuItem key={type} value={type}>
-                                                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Typography variant="subtitle1">Items</Typography>
-                                        {meal.items.map((item, itemIndex) => (
-                                            <Box key={itemIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                                                <TextField
-                                                    label="Item Name"
-                                                    value={item.name}
-                                                    onChange={(e) => handleMealItemChange(mealIndex, itemIndex, 'name', e.target.value)}
-                                                    required
-                                                />
-                                                <TextField
-                                                    label="Quantity"
-                                                    value={item.quantity}
-                                                    onChange={(e) => handleMealItemChange(mealIndex, itemIndex, 'quantity', e.target.value)}
-                                                    required
-                                                />
-                                                <TextField
-                                                    label="Special Instructions"
-                                                    value={item.specialInstructions}
-                                                    onChange={(e) => handleMealItemChange(mealIndex, itemIndex, 'specialInstructions', e.target.value)}
-                                                />
+        <Container maxWidth="lg">
+            <Paper sx={{ p: 3, mt: 3 }}>
+                <Typography variant="h5" gutterBottom>
+                    {chartId ? 'Edit Diet Chart' : 'Create New Diet Chart'}
+                </Typography>
+
+                <Box component="form" onSubmit={handleSubmit}>
+                    <Grid container spacing={3}>
+                        {/* Patient Selection */}
+                        <Grid item xs={12}>
+                            <FormControl fullWidth>
+                                <InputLabel>Patient</InputLabel>
+                                <Select
+                                    name="patient"
+                                    value={formData.patient || ''}
+                                    onChange={handleChange}
+                                    required
+                                    disabled={!!patientId || chartId}
+                                >
+                                    {patients.map((patient) => (
+                                        <MenuItem key={patient._id} value={patient._id}>
+                                            {patient.name} - Room: {patient.roomNumber}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        {/* Date Selection */}
+                        <Grid item xs={12} md={6}>
+                            <DatePicker
+                                label="Start Date"
+                                value={formData.startDate}
+                                onChange={(newValue) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        startDate: newValue
+                                    }));
+                                }}
+                                slotProps={{ textField: { fullWidth: true } }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <DatePicker
+                                label="End Date"
+                                value={formData.endDate}
+                                onChange={(newValue) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        endDate: newValue
+                                    }));
+                                }}
+                                slotProps={{ textField: { fullWidth: true } }}
+                            />
+                        </Grid>
+
+                        {/* Meal Form */}
+                        <Grid item xs={12}>
+                            <Typography variant="h6" gutterBottom>Add Meals</Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} md={3}>
+                                    <FormControl fullWidth>
+                                        <InputLabel>Meal Type</InputLabel>
+                                        <Select
+                                            name="type"
+                                            value={mealForm.type}
+                                            onChange={handleMealFormChange}
+                                        >
+                                            {MEAL_TYPES.map((type) => (
+                                                <MenuItem key={type} value={type}>
+                                                    {type}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={2}>
+                                    <TextField
+                                        fullWidth
+                                        label="Time"
+                                        name="time"
+                                        value={mealForm.time}
+                                        onChange={handleMealFormChange}
+                                        type="time"
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        fullWidth
+                                        label="Items"
+                                        name="items"
+                                        value={mealForm.items}
+                                        onChange={handleMealFormChange}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={2}>
+                                    <TextField
+                                        fullWidth
+                                        label="Calories"
+                                        name="calories"
+                                        type="number"
+                                        value={mealForm.calories}
+                                        onChange={handleMealFormChange}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={2}>
+                                    <Button
+                                        fullWidth
+                                        variant="contained"
+                                        onClick={addMeal}
+                                        startIcon={<AddIcon />}
+                                    >
+                                        Add Meal
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+
+                        {/* Meals List */}
+                        <Grid item xs={12}>
+                            <List>
+                                {formData.meals.map((meal, index) => (
+                                    <React.Fragment key={meal.id || index}>
+                                        <ListItem>
+                                            <ListItemText
+                                                primary={`${meal.type} - ${meal.time}`}
+                                                secondary={
+                                                    <>
+                                                        <Typography component="span" variant="body2">
+                                                            Items: {meal.items}
+                                                            {meal.calories && ` | Calories: ${meal.calories}`}
+                                                        </Typography>
+                                                        {meal.specialInstructions && (
+                                                            <>
+                                                                <br />
+                                                                <Typography component="span" variant="body2">
+                                                                    Instructions: {meal.specialInstructions}
+                                                                </Typography>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                }
+                                            />
+                                            <ListItemSecondaryAction>
                                                 <IconButton
-                                                    color="error"
-                                                    onClick={() => removeMealItem(mealIndex, itemIndex)}
-                                                    disabled={meal.items.length === 1}
+                                                    edge="end"
+                                                    onClick={() => removeMeal(meal.id)}
                                                 >
                                                     <DeleteIcon />
                                                 </IconButton>
-                                            </Box>
-                                        ))}
-                                        <Button
-                                            startIcon={<AddIcon />}
-                                            onClick={() => addMealItem(mealIndex)}
-                                        >
-                                            Add Item
-                                        </Button>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Autocomplete
-                                            multiple
-                                            freeSolo
-                                            options={[]}
-                                            value={meal.specialInstructions}
-                                            onChange={(_, newValue) => handleMealChange(mealIndex, 'specialInstructions', newValue)}
-                                            renderInput={(params) => (
-                                                <TextField
-                                                    {...params}
-                                                    label="Special Instructions"
-                                                    placeholder="Add special instructions"
-                                                />
-                                            )}
-                                        />
-                                    </Grid>
-                                </Grid>
-                                {formData.meals.length > 1 && (
-                                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Button
-                                            color="error"
-                                            onClick={() => removeMeal(mealIndex)}
-                                        >
-                                            Remove Meal
-                                        </Button>
-                                    </Box>
-                                )}
-                            </Box>
-                        ))}
+                                            </ListItemSecondaryAction>
+                                        </ListItem>
+                                        {index < formData.meals.length - 1 && <Divider />}
+                                    </React.Fragment>
+                                ))}
+                            </List>
+                        </Grid>
+
+                        {/* Special Instructions */}
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                multiline
+                                rows={4}
+                                label="Special Instructions"
+                                name="specialInstructions"
+                                value={formData.specialInstructions}
+                                onChange={handleChange}
+                            />
+                        </Grid>
+                    </Grid>
+
+                    {/* Form Actions */}
+                    <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                         <Button
                             variant="outlined"
-                            startIcon={<AddIcon />}
-                            onClick={addMeal}
+                            onClick={() => navigate('/diet-charts')}
                         >
-                            Add Meal
+                            Cancel
                         </Button>
-                    </Grid>
-
-                    {/* Dietary Restrictions */}
-                    <Grid item xs={12}>
-                        <Autocomplete
-                            multiple
-                            freeSolo
-                            options={[]}
-                            value={formData.restrictions}
-                            onChange={(_, newValue) => setFormData({ ...formData, restrictions: newValue })}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Dietary Restrictions"
-                                    placeholder="Add restrictions"
-                                />
-                            )}
-                        />
-                    </Grid>
-
-                    {/* Submit Buttons */}
-                    <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                            <Button
-                                variant="outlined"
-                                onClick={() => navigate('/diet-charts')}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                disabled={loading}
-                            >
-                                {loading ? 'Saving...' : (id ? 'Update' : 'Create')}
-                            </Button>
-                        </Box>
-                    </Grid>
-                </Grid>
-            </Box>
-        </Paper>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={loading}
+                        >
+                            {loading ? 'Saving...' : (chartId ? 'Update' : 'Create')}
+                        </Button>
+                    </Box>
+                </Box>
+            </Paper>
+        </Container>
     );
 };
 

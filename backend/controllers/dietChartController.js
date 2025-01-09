@@ -7,12 +7,12 @@ const Patient = require('../models/Patient');
 const getDietCharts = async (req, res) => {
     try {
         const dietCharts = await DietChart.find()
-            .populate('patient', 'name roomNumber')
+            .populate('patient', 'name roomNumber bedNumber')
             .populate('createdBy', 'name')
             .sort('-createdAt');
         res.json(dietCharts);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching diet charts' });
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -22,16 +22,24 @@ const getDietCharts = async (req, res) => {
 const getDietChartById = async (req, res) => {
     try {
         const dietChart = await DietChart.findById(req.params.id)
-            .populate('patient', 'name roomNumber')
+            .populate('patient', 'name roomNumber bedNumber')
             .populate('createdBy', 'name');
         
         if (!dietChart) {
             return res.status(404).json({ message: 'Diet chart not found' });
         }
         
-        res.json(dietChart);
+        // Transform the data to include patient details
+        const response = {
+            ...dietChart.toObject(),
+            patientName: dietChart.patient?.name,
+            patientRoom: dietChart.patient?.roomNumber
+        };
+        
+        res.json(response);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching diet chart' });
+        console.error('Error fetching diet chart:', error);
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -40,28 +48,44 @@ const getDietChartById = async (req, res) => {
 // @access  Private/Manager/Admin
 const createDietChart = async (req, res) => {
     try {
-        const { patient, startDate, endDate, meals } = req.body;
+        const { patient, startDate, endDate, meals, specialInstructions } = req.body;
 
-        // Verify patient exists
-        const patientExists = await Patient.findById(patient);
-        if (!patientExists) {
+        // Check if patient exists
+        const existingPatient = await Patient.findById(patient);
+        if (!existingPatient) {
             return res.status(404).json({ message: 'Patient not found' });
         }
 
-        const dietChart = await DietChart.create({
+        // Check for active diet chart
+        const activeChart = await DietChart.findOne({
+            patient,
+            status: 'active'
+        });
+
+        if (activeChart) {
+            return res.status(400).json({ 
+                message: 'Patient already has an active diet chart' 
+            });
+        }
+
+        const dietChart = new DietChart({
             patient,
             startDate,
             endDate,
             meals,
+            specialInstructions,
             createdBy: req.user._id
         });
 
-        res.status(201).json(dietChart);
+        const savedChart = await dietChart.save();
+
+        // Update patient's current diet chart
+        existingPatient.currentDietChart = savedChart._id;
+        await existingPatient.save();
+
+        res.status(201).json(savedChart);
     } catch (error) {
-        res.status(400).json({ 
-            message: 'Error creating diet chart',
-            error: error.message 
-        });
+        res.status(400).json({ message: error.message });
     }
 };
 
@@ -70,23 +94,40 @@ const createDietChart = async (req, res) => {
 // @access  Private/Manager/Admin
 const updateDietChart = async (req, res) => {
     try {
+        const { startDate, endDate, meals, specialInstructions, status } = req.body;
+        
+        console.log('Updating diet chart with data:', req.body);
+
         const dietChart = await DietChart.findById(req.params.id);
         if (!dietChart) {
             return res.status(404).json({ message: 'Diet chart not found' });
         }
 
-        const updatedDietChart = await DietChart.findByIdAndUpdate(
-            req.params.id,
-            {
-                ...req.body,
-                updatedBy: req.user._id
-            },
-            { new: true, runValidators: true }
-        );
+        // Update the fields
+        if (startDate) dietChart.startDate = new Date(startDate);
+        if (endDate) dietChart.endDate = new Date(endDate);
+        if (meals) {
+            dietChart.meals = meals.map(meal => ({
+                type: meal.type,
+                time: meal.time,
+                items: meal.items,
+                calories: meal.calories || 0,
+                specialInstructions: meal.specialInstructions || ''
+            }));
+        }
+        if (specialInstructions !== undefined) dietChart.specialInstructions = specialInstructions;
+        if (status) dietChart.status = status;
 
-        res.json(updatedDietChart);
+        const updatedChart = await dietChart.save();
+        
+        // Populate necessary fields before sending response
+        await updatedChart.populate('patient', 'name roomNumber');
+        
+        console.log('Updated diet chart:', updatedChart);
+        res.json(updatedChart);
     } catch (error) {
-        res.status(400).json({ message: 'Error updating diet chart' });
+        console.error('Error updating diet chart:', error);
+        res.status(400).json({ message: error.message });
     }
 };
 
@@ -100,10 +141,15 @@ const deleteDietChart = async (req, res) => {
             return res.status(404).json({ message: 'Diet chart not found' });
         }
 
+        // Update patient's current diet chart reference
+        await Patient.findByIdAndUpdate(dietChart.patient, {
+            $unset: { currentDietChart: "" }
+        });
+
         await dietChart.remove();
-        res.json({ message: 'Diet chart deleted successfully' });
+        res.json({ message: 'Diet chart deleted' });
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting diet chart' });
+        res.status(500).json({ message: error.message });
     }
 };
 

@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Drawer,
@@ -22,38 +21,14 @@ import {
     LocalShipping,
     ExitToApp,
 } from '@mui/icons-material';
-
-// Import dashboard components
-import AdminDashboard from '../dashboard/AdminDashboard';
-import PantryDashboard from '../dashboard/PantryDashboard';
-import DeliveryDashboard from '../dashboard/DeliveryDashboard';
-import PatientList from '../patients/PatientList';
-import PatientForm from '../patients/PatientForm';
-import ManagerDashboard from '../dashboard/ManagerDashboard';
+import { useAuth } from '../../context/AuthContext';
 
 const drawerWidth = 240;
 
-const Layout = () => {
+const Layout = ({ children }) => {
     const [mobileOpen, setMobileOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-
-    console.log('Layout - Current user:', user); // Debug log
-
-    useEffect(() => {
-        if (!user) {
-            navigate('/login');
-        }
-    }, [user, navigate]);
-
-    const handleDrawerToggle = () => {
-        setMobileOpen(!mobileOpen);
-    };
-
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
 
     const menuItems = [
         {
@@ -73,32 +48,28 @@ const Layout = () => {
             icon: <Restaurant />,
             path: '/diet-charts',
             roles: ['admin', 'manager', 'pantry']
-        },
-        {
-            text: 'Deliveries',
-            icon: <LocalShipping />,
-            path: '/deliveries',
-            roles: ['delivery', 'pantry']
         }
     ];
 
+    const handleDrawerToggle = () => {
+        setMobileOpen(!mobileOpen);
+    };
+
     const drawer = (
         <div>
-            <Toolbar>
-                <Typography variant="h6" noWrap>
-                    Hospital Food
-                </Typography>
-            </Toolbar>
+            <Toolbar />
             <Divider />
             <List>
                 {menuItems.map((item) => (
                     item.roles.includes(user?.role) && (
-                        <ListItem
-                            button
+                        <ListItem 
+                            button 
                             key={item.text}
                             onClick={() => navigate(item.path)}
                         >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
+                            <ListItemIcon>
+                                {item.icon}
+                            </ListItemIcon>
                             <ListItemText primary={item.text} />
                         </ListItem>
                     )
@@ -106,7 +77,7 @@ const Layout = () => {
             </List>
             <Divider />
             <List>
-                <ListItem button onClick={handleLogout}>
+                <ListItem button onClick={logout}>
                     <ListItemIcon>
                         <ExitToApp />
                     </ListItemIcon>
@@ -116,33 +87,14 @@ const Layout = () => {
         </div>
     );
 
-    const getDashboardComponent = () => {
-        console.log('Getting dashboard for role:', user?.role); // Debug log
-        
-        if (!user) {
-            return <Navigate to="/login" />;
-        }
-
-        switch (user.role) {
-            case 'admin':
-                return <AdminDashboard />;
-            case 'manager':
-                return <ManagerDashboard />;
-            case 'pantry':
-                return <PantryDashboard />;
-            case 'delivery':
-                return <DeliveryDashboard />;
-            default:
-                console.log('No matching role found, redirecting to login'); // Debug log
-                return <Navigate to="/login" />;
-        }
-    };
-
     return (
         <Box sx={{ display: 'flex' }}>
             <AppBar
                 position="fixed"
-                sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                sx={{
+                    width: { sm: `calc(100% - ${drawerWidth}px)` },
+                    ml: { sm: `${drawerWidth}px` },
+                }}
             >
                 <Toolbar>
                     <IconButton
@@ -202,15 +154,7 @@ const Layout = () => {
                 }}
             >
                 <Toolbar />
-                <Routes>
-                    <Route
-                        path="/dashboard"
-                        element={getDashboardComponent()}
-                    />
-                    <Route path="/patients" element={<PatientList />} />
-                    <Route path="/patients/new" element={<PatientForm />} />
-                    <Route path="/patients/edit/:id" element={<PatientForm />} />
-                </Routes>
+                {children}
             </Box>
         </Box>
     );

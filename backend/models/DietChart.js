@@ -1,31 +1,32 @@
 const mongoose = require('mongoose');
 
-const mealItemSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    quantity: {
-        type: String,
-        required: true
-    },
-    calories: Number,
-    specialInstructions: [String]
-});
-
 const mealSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['breakfast', 'lunch', 'dinner', 'snack'],
-        required: true
+        required: true,
+        enum: ['Breakfast', 'Lunch', 'Snack', 'Dinner']
     },
     time: {
         type: String,
         required: true
     },
-    items: [mealItemSchema],
-    dietaryRestrictions: [String],
-    specialInstructions: [String]
+    items: {
+        type: String,
+        required: true
+    },
+    calories: {
+        type: Number,
+        default: 0
+    },
+    specialInstructions: {
+        type: String,
+        default: ''
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'preparing', 'ready', 'delivered'],
+        default: 'pending'
+    }
 });
 
 const dietChartSchema = new mongoose.Schema({
@@ -43,17 +44,13 @@ const dietChartSchema = new mongoose.Schema({
         required: true
     },
     meals: [mealSchema],
+    specialInstructions: String,
     status: {
         type: String,
         enum: ['active', 'completed', 'cancelled'],
         default: 'active'
     },
     createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }

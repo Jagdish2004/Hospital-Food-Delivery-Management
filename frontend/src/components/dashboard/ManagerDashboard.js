@@ -3,8 +3,6 @@ import {
     Grid,
     Paper,
     Typography,
-    Card,
-    CardContent,
     Box,
     Button,
     Table,
@@ -21,21 +19,21 @@ import {
     Add as AddIcon,
     Edit as EditIcon,
     Restaurant as DietIcon,
-    LocalShipping as DeliveryIcon
+    Person as PersonIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getPatients, getDietCharts, getDeliveryStatus, getManagerStats } from '../../services/api';
+import { getManagerStats } from '../../services/api';
 import { toast } from 'react-toastify';
 
 const ManagerDashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [dashboardData, setDashboardData] = useState({
         stats: {
-            totalPatients: 0,
-            activeDietCharts: 0,
-            pendingDeliveries: 0
+            patientCount: 0,
+            dietChartCount: 0,
+            pantryStaffCount: 0,
+            deliveryStaffCount: 0
         },
         recentPatients: [],
         recentDietCharts: []
@@ -48,32 +46,29 @@ const ManagerDashboard = () => {
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
-            setError(null);
-            console.log('Fetching dashboard data...');
             const response = await getManagerStats();
-            console.log('Dashboard data received:', response.data);
-            
-            if (!response.data || !response.data.stats) {
-                console.error('Invalid data structure:', response.data);
-                throw new Error('Invalid data received from server');
-            }
+            console.log('Raw API Response:', response); // Debug log
 
-            setDashboardData(response.data);
-        } catch (error) {
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response,
-                request: error.request
+            // Check if response has data property
+            const data = response.data || response;
+            console.log('Processed data:', data); // Debug log
+
+            setDashboardData({
+                stats: {
+                    patientCount: data?.stats?.patientCount ?? 0,
+                    dietChartCount: data?.stats?.dietChartCount ?? 0,
+                    pantryStaffCount: data?.stats?.pantryStaffCount ?? 0,
+                    deliveryStaffCount: data?.stats?.deliveryStaffCount ?? 0
+                },
+                recentPatients: data?.recentPatients ?? [],
+                recentDietCharts: data?.recentDietCharts ?? []
             });
-            setError(error.response?.data?.message || 'Error fetching dashboard data');
-            toast.error(error.response?.data?.message || 'Error fetching dashboard data');
+        } catch (error) {
+            console.error('Dashboard Error:', error);
+            toast.error('Failed to load dashboard data');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleCreateDietChart = (patientId) => {
-        navigate(`/diet-charts/new/${patientId}`);
     };
 
     if (loading) {
@@ -84,56 +79,53 @@ const ManagerDashboard = () => {
         );
     }
 
-    if (error) {
-        return (
-            <Box display="flex" flexDirection="column" alignItems="center" m={3}>
-                <Typography color="error" gutterBottom>{error}</Typography>
-                <Button variant="contained" onClick={fetchDashboardData}>
-                    Retry
-                </Button>
-            </Box>
-        );
-    }
-
     return (
-        <Box>
-            <Typography variant="h4" gutterBottom>
-                Manager Dashboard
-            </Typography>
+        <Box p={3}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h4">Manager Dashboard</Typography>
+                <Box display="flex" gap={2}>
+                    <Button
+                        variant="contained"
+                        startIcon={<PersonIcon />}
+                        onClick={() => navigate('/patients/new')}
+                    >
+                        Add Patient
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<DietIcon />}
+                        onClick={() => navigate('/diet-charts/new')}
+                    >
+                        Create Diet Chart
+                    </Button>
+                </Box>
+            </Box>
 
-            {/* Stats Cards */}
+            {/* Statistics */}
             <Grid container spacing={3} mb={3}>
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Total Patients
-                            </Typography>
-                            <Typography variant="h3">
-                                {dashboardData.stats.totalPatients}
-                            </Typography>
-                        </CardContent>
-                    </Card>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Total Patients</Typography>
+                        <Typography variant="h4">{dashboardData.stats.patientCount}</Typography>
+                    </Paper>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Active Diet Charts
-                            </Typography>
-                            <Typography variant="h3">{dashboardData.stats.activeDietCharts}</Typography>
-                        </CardContent>
-                    </Card>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Diet Charts</Typography>
+                        <Typography variant="h4">{dashboardData.stats.dietChartCount}</Typography>
+                    </Paper>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Pending Deliveries
-                            </Typography>
-                            <Typography variant="h3">{dashboardData.stats.pendingDeliveries}</Typography>
-                        </CardContent>
-                    </Card>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Pantry Staff</Typography>
+                        <Typography variant="h4">{dashboardData.stats.pantryStaffCount}</Typography>
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Delivery Staff</Typography>
+                        <Typography variant="h4">{dashboardData.stats.deliveryStaffCount}</Typography>
+                    </Paper>
                 </Grid>
             </Grid>
 
@@ -142,11 +134,10 @@ const ManagerDashboard = () => {
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                     <Typography variant="h6">Recent Patients</Typography>
                     <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => navigate('/patients/new')}
+                        variant="outlined"
+                        onClick={() => navigate('/patients')}
                     >
-                        Add Patient
+                        View All Patients
                     </Button>
                 </Box>
                 <TableContainer>
@@ -156,39 +147,29 @@ const ManagerDashboard = () => {
                                 <TableCell>Name</TableCell>
                                 <TableCell>Room</TableCell>
                                 <TableCell>Bed</TableCell>
-                                <TableCell>Age</TableCell>
-                                <TableCell>Gender</TableCell>
-                                <TableCell>Contact</TableCell>
                                 <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {Array.isArray(dashboardData.recentPatients) && dashboardData.recentPatients.map((patient) => (
+                            {dashboardData.recentPatients.map((patient) => (
                                 <TableRow key={patient._id}>
                                     <TableCell>{patient.name}</TableCell>
                                     <TableCell>{patient.roomNumber}</TableCell>
                                     <TableCell>{patient.bedNumber}</TableCell>
-                                    <TableCell>{patient.age}</TableCell>
-                                    <TableCell>{patient.gender}</TableCell>
-                                    <TableCell>{patient.contactNumber}</TableCell>
                                     <TableCell>
-                                        <IconButton
+                                        <IconButton 
                                             onClick={() => navigate(`/patients/edit/${patient._id}`)}
                                             size="small"
-                                            title="Edit Patient"
                                         >
                                             <EditIcon />
                                         </IconButton>
-                                        {!patient.hasDietChart && (
-                                            <IconButton
-                                                onClick={() => handleCreateDietChart(patient._id)}
-                                                size="small"
-                                                color="primary"
-                                                title="Create Diet Chart"
-                                            >
-                                                <DietIcon />
-                                            </IconButton>
-                                        )}
+                                        <IconButton
+                                            onClick={() => navigate(`/diet-charts/new/${patient._id}`)}
+                                            size="small"
+                                            color="primary"
+                                        >
+                                            <DietIcon />
+                                        </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -198,10 +179,16 @@ const ManagerDashboard = () => {
             </Paper>
 
             {/* Recent Diet Charts */}
-            <Paper sx={{ mb: 3, p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    Recent Diet Charts
-                </Typography>
+            <Paper sx={{ p: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="h6">Recent Diet Charts</Typography>
+                    <Button
+                        variant="outlined"
+                        onClick={() => navigate('/diet-charts')}
+                    >
+                        View All Diet Charts
+                    </Button>
+                </Box>
                 <TableContainer>
                     <Table>
                         <TableHead>
@@ -216,7 +203,7 @@ const ManagerDashboard = () => {
                         <TableBody>
                             {dashboardData.recentDietCharts.map((chart) => (
                                 <TableRow key={chart._id}>
-                                    <TableCell>{chart.patient.name}</TableCell>
+                                    <TableCell>{chart.patient?.name}</TableCell>
                                     <TableCell>
                                         {new Date(chart.startDate).toLocaleDateString()}
                                     </TableCell>
@@ -224,7 +211,7 @@ const ManagerDashboard = () => {
                                         {new Date(chart.endDate).toLocaleDateString()}
                                     </TableCell>
                                     <TableCell>
-                                        <Chip
+                                        <Chip 
                                             label={chart.status}
                                             color={chart.status === 'active' ? 'success' : 'default'}
                                             size="small"

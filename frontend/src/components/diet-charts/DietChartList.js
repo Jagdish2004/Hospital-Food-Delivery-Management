@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Paper,
     Table,
@@ -8,24 +7,27 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    IconButton,
     Button,
-    Typography,
     Box,
+    Typography,
     Chip,
-    IconButton
+    CircularProgress
 } from '@mui/material';
 import {
-    Add as AddIcon,
     Edit as EditIcon,
+    Delete as DeleteIcon,
+    Add as AddIcon,
     Visibility as ViewIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { getDietCharts } from '../../services/api';
 import { toast } from 'react-toastify';
 
 const DietChartList = () => {
+    const navigate = useNavigate();
     const [dietCharts, setDietCharts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
 
     useEffect(() => {
         fetchDietCharts();
@@ -42,37 +44,32 @@ const DietChartList = () => {
         }
     };
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'active':
-                return 'success';
-            case 'completed':
-                return 'default';
-            case 'cancelled':
-                return 'error';
-            default:
-                return 'default';
-        }
-    };
+    if (loading) {
+        return (
+            <Box display="flex" justifyContent="center" m={3}>
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     return (
-        <div>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4">Diet Charts</Typography>
+        <Box p={3}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h5">Diet Charts</Typography>
                 <Button
                     variant="contained"
-                    color="primary"
                     startIcon={<AddIcon />}
                     onClick={() => navigate('/diet-charts/new')}
                 >
-                    Create Diet Chart
+                    Create New Diet Chart
                 </Button>
             </Box>
+
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Patient</TableCell>
+                            <TableCell>Patient Name</TableCell>
                             <TableCell>Room</TableCell>
                             <TableCell>Start Date</TableCell>
                             <TableCell>End Date</TableCell>
@@ -83,10 +80,8 @@ const DietChartList = () => {
                     <TableBody>
                         {dietCharts.map((chart) => (
                             <TableRow key={chart._id}>
-                                <TableCell>{chart.patient.name}</TableCell>
-                                <TableCell>
-                                    {`${chart.patient.roomNumber} (Bed ${chart.patient.bedNumber})`}
-                                </TableCell>
+                                <TableCell>{chart.patient?.name}</TableCell>
+                                <TableCell>{chart.patient?.roomNumber}</TableCell>
                                 <TableCell>
                                     {new Date(chart.startDate).toLocaleDateString()}
                                 </TableCell>
@@ -96,19 +91,18 @@ const DietChartList = () => {
                                 <TableCell>
                                     <Chip
                                         label={chart.status}
-                                        color={getStatusColor(chart.status)}
+                                        color={chart.status === 'active' ? 'success' : 'default'}
                                         size="small"
                                     />
                                 </TableCell>
                                 <TableCell>
                                     <IconButton
-                                        color="primary"
-                                        onClick={() => navigate(`/diet-charts/${chart._id}`)}
+                                        onClick={() => navigate(`/diet-charts/view/${chart._id}`)}
+                                        title="View Details"
                                     >
                                         <ViewIcon />
                                     </IconButton>
                                     <IconButton
-                                        color="primary"
                                         onClick={() => navigate(`/diet-charts/edit/${chart._id}`)}
                                     >
                                         <EditIcon />
@@ -119,7 +113,7 @@ const DietChartList = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
-        </div>
+        </Box>
     );
 };
 
