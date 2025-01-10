@@ -13,6 +13,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Home as HomeIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import { api } from '../../services/api';
 
 const Login = () => {
     const navigate = useNavigate();
