@@ -37,4 +37,14 @@ router.put('/tasks/:taskId/quality-check', authorize(['pantry']), performQuality
 router.get('/staff/tasks', protect, authorize(['pantry']), getMyTasks);
 router.put('/staff/tasks/:taskId/status', protect, authorize(['pantry']), updateTaskStatus);
 
+// Update the error handling middleware
+router.use((err, req, res, next) => {
+    console.error('Pantry Route Error:', err);
+    res.status(500).json({
+        success: false,
+        message: 'Internal server error in pantry route',
+        error: err.message
+    });
+});
+
 module.exports = router; 

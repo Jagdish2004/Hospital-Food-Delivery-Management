@@ -21,6 +21,7 @@ const AssignTaskForm = ({ open, onClose, dietChart, meal, onTaskAssigned }) => {
     const [selectedStaff, setSelectedStaff] = useState('');
     const [instructions, setInstructions] = useState('');
     const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchPantryStaff();
@@ -38,32 +39,29 @@ const AssignTaskForm = ({ open, onClose, dietChart, meal, onTaskAssigned }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!selectedStaff) {
-            toast.error('Please select a staff member');
-            return;
-        }
-
+        setSubmitting(true);
         try {
-            setLoading(true);
-            const taskData = {
+            const response = await assignTask({
                 dietChart: dietChart._id,
-                meal: meal._id,
+                meal: meal,
                 mealType: meal.type,
                 scheduledTime: meal.time,
                 assignedTo: selectedStaff,
                 specialInstructions: instructions
-            };
-            
-            console.log('Submitting task data:', taskData);
-            await assignTask(taskData);
-            toast.success('Task assigned successfully');
-            onTaskAssigned();
-            onClose();
+            });
+
+            if (response && response.success) {
+                toast.success('Task assigned successfully');
+                onTaskAssigned();
+                onClose();
+                setSelectedStaff('');
+                setInstructions('');
+            }
         } catch (error) {
             console.error('Error assigning task:', error);
-            toast.error('Failed to assign task');
+            toast.error(error.response?.data?.message || 'Failed to assign task');
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 

@@ -121,11 +121,18 @@ export const deleteDietChart = (id) => api.delete(`/diet-charts/${id}`);
 // Pantry endpoints
 export const getPantryTasks = async () => {
     try {
-        const response = await api.get('/pantry/tasks');
-        return response.data;
+        const response = await api.get('/manager/pending-tasks');
+        return { 
+            success: true,
+            data: response.data || [] 
+        };
     } catch (error) {
         console.error('Error fetching pantry tasks:', error);
-        return { data: [] };
+        return { 
+            success: false,
+            data: [],
+            error: error.response?.data?.message || 'Failed to fetch tasks'
+        };
     }
 };
 export const getMyPantryTasks = async () => {
@@ -196,12 +203,15 @@ export const getManagerStats = async () => {
 
 export const assignTask = async (taskData) => {
     try {
-        console.log('Assigning task with data:', taskData);
         const response = await api.post('/manager/assign-task', taskData);
         return response.data;
     } catch (error) {
         console.error('Error assigning task:', error);
-        throw error;
+        // Only throw if it's a real error
+        if (!error.response || error.response.status !== 201) {
+            throw error;
+        }
+        return error.response.data;
     }
 };
 

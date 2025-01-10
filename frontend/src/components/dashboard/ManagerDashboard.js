@@ -17,12 +17,18 @@ import {
     List,
     ListItem,
     ListItemAvatar,
-    ListItemText
+    ListItemText,
+    TableContainer,
+    Table,
+    TableHead,
+    TableBody,
+    TableRow,
+    TableCell
 } from '@mui/material';
 import {
     Add as AddIcon,
     Edit as EditIcon,
-    Restaurant as DietIcon,
+    Restaurant as RestaurantIcon,
     Person as PersonIcon,
     Kitchen as KitchenIcon,
     LocalShipping as DeliveryIcon,
@@ -33,13 +39,33 @@ import {
     Room as RoomIcon,
     Phone as PhoneIcon,
     Email as EmailIcon,
-    Delete as DeleteIcon
+    Delete as DeleteIcon,
+    CheckCircle as CheckCircleIcon,
+    LocalHospital as PatientIcon,
+    Restaurant as DietIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getManagerStats, getPantryTasks } from '../../services/api';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import AssignTaskForm from '../manager/AssignTaskForm';
+import { managerService } from '../../services/managerService';
+import { 
+    PieChart, 
+    Pie, 
+    Cell, 
+    ResponsiveContainer,
+    Tooltip,
+    Legend 
+} from 'recharts';
+
+const COLORS = {
+    pending: '#ffc107',    // warning
+    preparing: '#2196f3',  // primary
+    ready: '#ff9800',      // orange
+    in_transit: '#03a9f4', // light blue
+    delivered: '#4caf50',  // success
+};
 
 const ManagerDashboard = () => {
     const navigate = useNavigate();
@@ -60,6 +86,21 @@ const ManagerDashboard = () => {
     const [openAssignTask, setOpenAssignTask] = useState(false);
     const [selectedDietChart, setSelectedDietChart] = useState(null);
     const [selectedMeal, setSelectedMeal] = useState(null);
+    const [pantryStaff, setPantryStaff] = useState([]);
+    const [loadingStaff, setLoadingStaff] = useState(true);
+    const [deliveryStats, setDeliveryStats] = useState({
+        ready: 0,
+        inTransit: 0,
+        delivered: 0
+    });
+    const [activeDeliveries, setActiveDeliveries] = useState([]);
+    const [taskOverview, setTaskOverview] = useState({
+        pending: 0,
+        preparing: 0,
+        ready: 0,
+        inTransit: 0,
+        delivered: 0
+    });
 
     useEffect(() => {
         fetchDashboardData();
@@ -67,6 +108,50 @@ const ManagerDashboard = () => {
 
     useEffect(() => {
         fetchTasks();
+    }, []);
+
+    useEffect(() => {
+        const fetchManagerData = async () => {
+            try {
+                const [staffData, deliveryData] = await Promise.all([
+                    managerService.getPantryStaffList(),
+                    managerService.getDeliveryStats()
+                ]);
+                
+                setPantryStaff(staffData);
+                setDeliveryStats(deliveryData);
+            } catch (error) {
+                console.error('Error fetching manager data:', error);
+                toast.error('Failed to fetch dashboard data');
+            } finally {
+                setLoadingStaff(false);
+            }
+        };
+
+        fetchManagerData();
+        const interval = setInterval(fetchManagerData, 60000); // Refresh every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const [deliveries, overview] = await Promise.all([
+                    managerService.getActiveDeliveries(),
+                    managerService.getTaskOverview()
+                ]);
+                
+                setActiveDeliveries(deliveries);
+                setTaskOverview(overview);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+                toast.error('Failed to fetch dashboard data');
+            }
+        };
+
+        fetchDashboardData();
+        const interval = setInterval(fetchDashboardData, 60000); // Refresh every minute
+        return () => clearInterval(interval);
     }, []);
 
     const fetchDashboardData = async () => {
@@ -82,10 +167,22 @@ const ManagerDashboard = () => {
 
     const fetchTasks = async () => {
         try {
+            setLoading(true);
             const response = await getPantryTasks();
-            setTasks(response.data);
+            console.log('Fetched tasks:', response); // Debug log
+            
+            if (response.success) {
+                setTasks(response.data);
+            } else {
+                toast.error(response.error || 'Failed to fetch tasks');
+                setTasks([]);
+            }
         } catch (error) {
             console.error('Error fetching tasks:', error);
+            toast.error('Failed to fetch tasks');
+            setTasks([]);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -93,6 +190,58 @@ const ManagerDashboard = () => {
         setSelectedDietChart(chart);
         setSelectedMeal(meal);
         setOpenAssignTask(true);
+    };
+
+    const getTaskChartData = () => {
+        return [
+            { name: 'Pending', value: taskOverview.pending },
+            { name: 'Preparing', value: taskOverview.preparing },
+            { name: 'Ready', value: taskOverview.ready },
+            { name: 'In Transit', value: taskOverview.inTransit },
+            { name: 'Delivered', value: taskOverview.delivered }
+        ].filter(item => item.value > 0);
+    };
+
+    const getDeliveryChartData = () => {
+        if (!deliveryStats) return [];
+        
+        return [
+            { name: 'Ready', value: deliveryStats.ready || 0 },
+            { name: 'In Transit', value: deliveryStats.inTransit || 0 },
+            { name: 'Delivered', value: deliveryStats.delivered || 0 }
+        ].filter(item => item.value > 0);
+    };
+
+    const handleAssignTaskSuccess = async () => {
+        try {
+            await fetchTasks(); // Refresh tasks
+            setOpenAssignTask(false); // Close the dialog
+            setSelectedDietChart(null); // Reset selected diet chart
+            setSelectedMeal(null); // Reset selected meal
+            
+            // Remove the assigned meal from the recent diet charts
+            const updatedDietCharts = dashboardData.recentDietCharts.map(chart => {
+                if (chart._id === selectedDietChart._id) {
+                    return {
+                        ...chart,
+                        meals: chart.meals.filter(meal => 
+                            meal.type !== selectedMeal.type || 
+                            meal.time !== selectedMeal.time
+                        )
+                    };
+                }
+                return chart;
+            });
+
+            setDashboardData(prev => ({
+                ...prev,
+                recentDietCharts: updatedDietCharts
+            }));
+
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            toast.error('Failed to refresh data');
+        }
     };
 
     if (loading) {
@@ -120,7 +269,7 @@ const ManagerDashboard = () => {
                         <Box>
                             <Typography variant="h4">Manager Dashboard</Typography>
                             <Typography variant="subtitle1">
-                                Overview of hospital food service operations
+                                Overview and Analytics
                             </Typography>
                         </Box>
                         <Box display="flex" gap={2}>
@@ -128,13 +277,7 @@ const ManagerDashboard = () => {
                                 variant="contained"
                                 startIcon={<PersonIcon />}
                                 onClick={() => navigate('/patients/new')}
-                                sx={{ 
-                                    bgcolor: 'white', 
-                                    color: '#1976d2',
-                                    '&:hover': {
-                                        bgcolor: '#e3f2fd',
-                                    }
-                                }}
+                                sx={{ bgcolor: 'white', color: '#1976d2' }}
                             >
                                 Add Patient
                             </Button>
@@ -142,13 +285,7 @@ const ManagerDashboard = () => {
                                 variant="contained"
                                 startIcon={<DietIcon />}
                                 onClick={() => navigate('/diet-charts/new')}
-                                sx={{ 
-                                    bgcolor: 'white', 
-                                    color: '#1976d2',
-                                    '&:hover': {
-                                        bgcolor: '#e3f2fd',
-                                    }
-                                }}
+                                sx={{ bgcolor: 'white', color: '#1976d2' }}
                             >
                                 Create Diet Chart
                             </Button>
@@ -156,17 +293,17 @@ const ManagerDashboard = () => {
                     </Box>
                 </Paper>
 
-                {/* Stats Cards */}
-                <Grid container spacing={3} mb={4}>
+                {/* Quick Stats Cards */}
+                <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid item xs={12} md={3}>
                         <Card elevation={3}>
                             <CardContent sx={{ textAlign: 'center' }}>
-                                <PersonIcon sx={{ fontSize: 40, color: '#1976d2', mb: 1 }} />
+                                <PatientIcon sx={{ fontSize: 40, color: '#1976d2', mb: 1 }} />
                                 <Typography variant="h4" color="primary">
                                     {dashboardData.stats.patientCount}
                                 </Typography>
                                 <Typography variant="subtitle1" color="textSecondary">
-                                    Active Patients
+                                    Total Patients
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -212,242 +349,315 @@ const ManagerDashboard = () => {
                     </Grid>
                 </Grid>
 
-                {/* Add Pantry Staff Section */}
-                <Paper elevation={3} sx={{ mb: 4 }}>
-                    <Box p={2} bgcolor="primary.light" color="primary.contrastText" 
-                        display="flex" justifyContent="space-between" alignItems="center">
-                        <Box display="flex" alignItems="center" gap={1}>
-                            <StaffIcon />
-                            <Typography variant="h6">Pantry Staff Management</Typography>
-                        </Box>
-                        <Button 
-                            variant="contained" 
-                            component={Link} 
-                            to="/pantry-staff"
-                            sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
-                        >
-                            View All
-                        </Button>
-                    </Box>
-                    <Divider />
-                    <List>
-                        {dashboardData.stats?.recentPantryStaff?.slice(0, 5).map((staff) => (
-                            <ListItem
-                                key={staff._id}
-                                sx={{
-                                    borderBottom: '1px solid',
-                                    borderColor: 'divider',
-                                    '&:last-child': { borderBottom: 'none' }
-                                }}
-                            >
-                                <ListItemAvatar>
-                                    <Avatar>{staff.name[0]}</Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                    primary={staff.name}
-                                    secondary={
-                                        <Box display="flex" alignItems="center" gap={1}>
-                                            <Typography variant="body2" component="span">
-                                                {staff.email}
-                                            </Typography>
-                                            {staff.pantry && (
-                                                <Chip
-                                                    size="small"
-                                                    icon={<KitchenIcon />}
-                                                    label={staff.pantry.name}
-                                                    variant="outlined"
-                                                />
-                                            )}
-                                        </Box>
-                                    }
-                                />
-                            </ListItem>
-                        ))}
-                    </List>
-                </Paper>
-
-                {/* Deliveries Section */}
-                <Grid container spacing={3}>
-                    {/* Pending Deliveries */}
+                {/* Analytics Section */}
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    {/* Task Overview */}
                     <Grid item xs={12} md={6}>
-                        <Paper elevation={3}>
-                            <Box p={2} bgcolor="warning.light" color="warning.contrastText">
-                                <Typography variant="h6" display="flex" alignItems="center" gap={1}>
-                                    <PendingIcon />
-                                    Pending Deliveries
-                                </Typography>
+                        <Paper sx={{ 
+                            p: 2, 
+                            height: '400px',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            <Typography variant="h6" gutterBottom>
+                                Task Overview
+                            </Typography>
+                            <Box sx={{ 
+                                flex: 1,
+                                width: '100%',
+                                minHeight: 300
+                            }}>
+                                <ResponsiveContainer>
+                                    <PieChart>
+                                        <Pie
+                                            data={getTaskChartData()}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            fill="#8884d8"
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {getTaskChartData().map((entry, index) => (
+                                                <Cell 
+                                                    key={`cell-${index}`} 
+                                                    fill={COLORS[entry.name.toLowerCase().replace(' ', '_')] || '#000'} 
+                                                />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </Box>
-                            <Divider />
-                            <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
-                                {dashboardData.recentDeliveries?.filter(delivery => 
-                                    delivery.status === 'ready' || delivery.status === 'out_for_delivery'
-                                ).map((delivery) => (
-                                    <ListItem
-                                        key={delivery._id}
-                                        sx={{
-                                            borderBottom: '1px solid',
-                                            borderColor: 'divider',
-                                            '&:hover': { bgcolor: 'action.hover' }
-                                        }}
-                                    >
-                                        <ListItemAvatar>
-                                            <Avatar sx={{ bgcolor: 'warning.main' }}>
-                                                <DeliveryIcon />
-                                            </Avatar>
-                                        </ListItemAvatar>
-                                        <ListItemText
-                                            primary={
-                                                <Box display="flex" alignItems="center" gap={1}>
-                                                    <Typography variant="subtitle1">
-                                                        {delivery.dietChart?.patient?.name}
-                                                    </Typography>
-                                                    <Chip
-                                                        size="small"
-                                                        icon={<RoomIcon />}
-                                                        label={`Room ${delivery.dietChart?.patient?.roomNumber}`}
-                                                    />
-                                                </Box>
-                                            }
-                                            secondary={
-                                                <>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Meal: {delivery.mealType}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Status: {delivery.status === 'ready' ? 'Ready for Delivery' : 'Out for Delivery'}
-                                                    </Typography>
-                                                </>
-                                            }
-                                        />
-                                        <Chip
-                                            size="small"
-                                            color="warning"
-                                            label={new Date(delivery.scheduledTime).toLocaleTimeString()}
-                                        />
-                                    </ListItem>
-                                ))}
-                                {!dashboardData.recentDeliveries?.some(delivery => 
-                                    delivery.status === 'ready' || delivery.status === 'out_for_delivery'
-                                ) && (
-                                    <Box p={3} textAlign="center" color="text.secondary">
-                                        <Typography>No pending deliveries</Typography>
-                                    </Box>
-                                )}
-                            </List>
                         </Paper>
                     </Grid>
 
-                    {/* Recent Deliveries */}
+                    {/* Delivery Analytics */}
                     <Grid item xs={12} md={6}>
-                        <Paper elevation={3}>
-                            <CardContent>
-                                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Typography variant="h6" color="primary">
-                                        Recent Deliveries
-                                    </Typography>
-                                    <Button 
-                                        size="small" 
-                                        onClick={() => navigate('/delivery-management')}
-                                        endIcon={<TrendingIcon />}
-                                    >
-                                        View All
-                                    </Button>
-                                </Box>
-                                <Divider sx={{ mb: 2 }} />
-                                <Grid container spacing={2}>
-                                    {dashboardData.recentDeliveries?.map((delivery) => (
-                                        <Grid item xs={12} md={6} key={delivery._id}>
-                                            <Paper 
-                                                elevation={1}
-                                                sx={{ 
-                                                    p: 2,
-                                                    bgcolor: 'grey.50'
-                                                }}
-                                            >
-                                                <Box display="flex" alignItems="center" gap={2}>
-                                                    <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                                                        <DeliveryIcon />
-                                                    </Avatar>
-                                                    <Box flex={1}>
-                                                        <Typography variant="subtitle1">
-                                                            {delivery.dietChart?.patient?.name || 'N/A'}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="textSecondary">
-                                                            {delivery.mealType} - Room: {delivery.dietChart?.patient?.roomNumber || 'N/A'}
-                                                        </Typography>
-                                                        <Box display="flex" alignItems="center" gap={1} mt={1}>
-                                                            <Chip
-                                                                label="Delivered"
-                                                                size="small"
-                                                                color="success"
-                                                            />
-                                                            <Typography variant="caption" color="textSecondary">
-                                                                {new Date(delivery.deliveryCompletionTime).toLocaleTimeString()}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Box>
-                                                </Box>
-                                            </Paper>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            </CardContent>
+                        <Paper sx={{ 
+                            p: 2, 
+                            height: '400px',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            <Typography variant="h6" gutterBottom>
+                                Delivery Analytics
+                            </Typography>
+                            <Box sx={{ 
+                                flex: 1,
+                                width: '100%',
+                                minHeight: 300
+                            }}>
+                                <ResponsiveContainer>
+                                    <PieChart>
+                                        <Pie
+                                            data={getDeliveryChartData()}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            fill="#8884d8"
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            <Cell fill={COLORS.ready} />
+                                            <Cell fill={COLORS.in_transit} />
+                                            <Cell fill={COLORS.delivered} />
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </Box>
                         </Paper>
                     </Grid>
                 </Grid>
 
-                {/* Recent Activities Section */}
+                {/* Staff and Task Management Section */}
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    {/* Pending Deliveries */}
+                    <Grid item xs={12} md={6}>
+                        <Paper sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Pending Deliveries
+                            </Typography>
+                            <Box sx={{ 
+                                maxHeight: '400px', 
+                                overflowY: 'auto',
+                                '&::-webkit-scrollbar': {
+                                    width: '8px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                    background: '#f1f1f1',
+                                    borderRadius: '4px',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    background: '#888',
+                                    borderRadius: '4px',
+                                },
+                                '&::-webkit-scrollbar-thumb:hover': {
+                                    background: '#555',
+                                }
+                            }}>
+                                <List>
+                                    {tasks
+                                        .filter(task => task.status === 'pending')
+                                        .map((task) => (
+                                            <ListItem 
+                                                key={task._id}
+                                                sx={{ 
+                                                    mb: 1,
+                                                    bgcolor: 'grey.50',
+                                                    borderRadius: 1,
+                                                    border: '1px solid',
+                                                    borderColor: 'grey.200'
+                                                }}
+                                            >
+                                                <ListItemAvatar>
+                                                    <Avatar sx={{ bgcolor: 'warning.main' }}>
+                                                        <PendingIcon />
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={
+                                                        <Box display="flex" alignItems="center" gap={1}>
+                                                            <Typography variant="subtitle2">
+                                                                {task.dietChart?.patient?.name || 'Unknown Patient'}
+                                                            </Typography>
+                                                            <Chip 
+                                                                label="Pending"
+                                                                color="warning"
+                                                                size="small"
+                                                            />
+                                                        </Box>
+                                                    }
+                                                    secondary={
+                                                        <>
+                                                            <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                                                                <RoomIcon fontSize="small" color="action" />
+                                                                <Typography component="span" variant="body2">
+                                                                    Room: {task.dietChart?.patient?.roomNumber || 'N/A'}
+                                                                </Typography>
+                                                            </Box>
+                                                            <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                                                                <RestaurantIcon fontSize="small" color="action" />
+                                                                <Typography component="span" variant="body2">
+                                                                    {task.mealType} - {new Date(task.scheduledTime).toLocaleTimeString([], { 
+                                                                        hour: '2-digit', 
+                                                                        minute: '2-digit' 
+                                                                    })}
+                                                                </Typography>
+                                                            </Box>
+                                                            <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                                                                <PersonIcon fontSize="small" color="action" />
+                                                                <Typography component="span" variant="body2">
+                                                                    Assigned to: {task.assignedTo?.name || 'Not assigned'}
+                                                                </Typography>
+                                                            </Box>
+                                                        </>
+                                                    }
+                                                />
+                                            </ListItem>
+                                        ))}
+                                    {tasks.filter(task => task.status === 'pending').length === 0 && (
+                                        <Box 
+                                            display="flex" 
+                                            flexDirection="column" 
+                                            alignItems="center" 
+                                            py={3}
+                                            color="text.secondary"
+                                        >
+                                            <PendingIcon sx={{ fontSize: 40, mb: 1, opacity: 0.5 }} />
+                                            <Typography>No pending tasks</Typography>
+                                        </Box>
+                                    )}
+                                </List>
+                            </Box>
+                        </Paper>
+                    </Grid>
+
+                    {/* Active Deliveries */}
+                    <Grid item xs={12} md={6}>
+                        <Paper sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Active Deliveries
+                            </Typography>
+                            <Box sx={{ 
+                                maxHeight: '400px', 
+                                overflowY: 'auto',
+                                '&::-webkit-scrollbar': {
+                                    width: '8px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                    background: '#f1f1f1',
+                                    borderRadius: '4px',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    background: '#888',
+                                    borderRadius: '4px',
+                                },
+                                '&::-webkit-scrollbar-thumb:hover': {
+                                    background: '#555',
+                                }
+                            }}>
+                                <List>
+                                    {activeDeliveries.map((delivery) => (
+                                        <ListItem 
+                                            key={delivery._id}
+                                            sx={{ 
+                                                mb: 1,
+                                                bgcolor: 'grey.50',
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor: 'grey.200'
+                                            }}
+                                        >
+                                            <ListItemAvatar>
+                                                <Avatar>
+                                                    <DeliveryIcon />
+                                                </Avatar>
+                                            </ListItemAvatar>
+                                            <ListItemText
+                                                primary={delivery.dietChart?.patient?.name}
+                                                secondary={
+                                                    <>
+                                                        <Typography component="span" variant="body2">
+                                                            Room: {delivery.dietChart?.patient?.roomNumber}
+                                                        </Typography>
+                                                        <br />
+                                                        <Typography component="span" variant="body2">
+                                                            Delivery Person: {delivery.deliveryPerson?.name}
+                                                        </Typography>
+                                                    </>
+                                                }
+                                            />
+                                            <Chip 
+                                                label="In Transit"
+                                                color="info"
+                                                size="small"
+                                            />
+                                        </ListItem>
+                                    ))}
+                                    {activeDeliveries.length === 0 && (
+                                        <Box 
+                                            display="flex" 
+                                            flexDirection="column" 
+                                            alignItems="center" 
+                                            py={3}
+                                            color="text.secondary"
+                                        >
+                                            <DeliveryIcon sx={{ fontSize: 40, mb: 1, opacity: 0.5 }} />
+                                            <Typography>No active deliveries</Typography>
+                                        </Box>
+                                    )}
+                                </List>
+                            </Box>
+                        </Paper>
+                    </Grid>
+                </Grid>
+
+                {/* Recent Activity Section */}
                 <Grid container spacing={3}>
                     {/* Recent Patients */}
                     <Grid item xs={12} md={6}>
-                        <Card elevation={3}>
-                            <CardContent>
-                                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Typography variant="h6" color="primary">
-                                        Recent Patients
-                                    </Typography>
-                                    <Button 
-                                        size="small" 
-                                        onClick={() => navigate('/patients')}
-                                        endIcon={<TrendingIcon />}
-                                    >
-                                        View All
-                                    </Button>
-                                </Box>
-                                <Divider sx={{ mb: 2 }} />
-                                {dashboardData.recentPatients.map((patient) => (
-                                    <Box 
-                                        key={patient._id} 
-                                        sx={{ 
-                                            mb: 2, 
-                                            p: 1.5, 
-                                            borderRadius: 1,
-                                            bgcolor: 'grey.50'
-                                        }}
-                                    >
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                                {patient.name[0]}
-                                            </Avatar>
-                                            <Box flex={1}>
-                                                <Typography variant="subtitle1">
-                                                    {patient.name}
-                                                </Typography>
-                                                <Typography variant="body2" color="textSecondary">
-                                                    Room: {patient.roomNumber}
-                                                </Typography>
-                                            </Box>
-                                            <IconButton 
-                                                size="small"
-                                                onClick={() => navigate(`/patients/view/${patient._id}`)}
-                                            >
-                                                <EditIcon />
-                                            </IconButton>
+                        <Paper sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Recent Patients
+                            </Typography>
+                            {dashboardData.recentPatients.map((patient) => (
+                                <Box 
+                                    key={patient._id} 
+                                    sx={{ 
+                                        mb: 2, 
+                                        p: 1.5, 
+                                        borderRadius: 1,
+                                        bgcolor: 'grey.50'
+                                    }}
+                                >
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                            {patient.name[0]}
+                                        </Avatar>
+                                        <Box flex={1}>
+                                            <Typography variant="subtitle1">
+                                                {patient.name}
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Room: {patient.roomNumber}
+                                            </Typography>
                                         </Box>
+                                        <IconButton 
+                                            size="small"
+                                            onClick={() => navigate(`/patients/view/${patient._id}`)}
+                                        >
+                                            <EditIcon />
+                                        </IconButton>
                                     </Box>
-                                ))}
-                            </CardContent>
-                        </Card>
+                                </Box>
+                            ))}
+                        </Paper>
                     </Grid>
 
                     {/* Recent Diet Charts */}
@@ -528,62 +738,10 @@ const ManagerDashboard = () => {
                             onClose={() => setOpenAssignTask(false)}
                             dietChart={selectedDietChart}
                             meal={selectedMeal}
-                            onTaskAssigned={() => {
-                                setOpenAssignTask(false);
-                                fetchDashboardData();
-                                fetchTasks();
-                            }}
+                            onSuccess={handleAssignTaskSuccess}
                         />
                     </Grid>
                 </Grid>
-
-                <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                        Task Status Overview
-                    </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="textSecondary">Pending</Typography>
-                                    <Typography variant="h4">
-                                        {tasks.filter(t => t.status === 'pending').length}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="textSecondary">In Progress</Typography>
-                                    <Typography variant="h4">
-                                        {tasks.filter(t => t.status === 'preparing').length}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="textSecondary">Ready</Typography>
-                                    <Typography variant="h4">
-                                        {tasks.filter(t => t.status === 'ready').length}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="textSecondary">Delivered</Typography>
-                                    <Typography variant="h4">
-                                        {tasks.filter(t => t.status === 'delivered').length}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    </Grid>
-                </Paper>
             </Box>
         </Container>
     );

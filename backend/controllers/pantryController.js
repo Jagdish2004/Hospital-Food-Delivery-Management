@@ -73,11 +73,18 @@ const getPantryTasks = async (req, res) => {
             })
             .populate('assignedTo', 'name')
             .populate('deliveryPerson', 'name')
-            .sort('scheduledTime');
+            .sort('-createdAt');
+
+        console.log('Found tasks:', tasks.length); // Debug log
 
         res.json(tasks);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error in getPantryTasks:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to fetch pantry tasks',
+            error: error.message 
+        });
     }
 };
 
