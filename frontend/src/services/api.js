@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 const api = axios.create({
-    baseURL: API_URL
+    baseURL: 'http://localhost:5000/api',
+    headers: {
+        'Content-Type': 'application/json'
+    }
 });
 
 // Request interceptor
@@ -17,7 +18,6 @@ api.interceptors.request.use(
         return config;
     },
     (error) => {
-        console.error('Request error:', error);
         return Promise.reject(error);
     }
 );
@@ -65,7 +65,15 @@ export const updatePatient = (id, patientData) => api.put(`/patients/${id}`, pat
 export const deletePatient = (id) => api.delete(`/patients/${id}`);
 
 // Diet chart endpoints
-export const getDietCharts = () => api.get('/diet-charts');
+export const getDietCharts = async () => {
+    try {
+        const response = await api.get('/diet-charts');
+        return { data: response.data || [] };
+    } catch (error) {
+        console.error('Error fetching diet charts:', error);
+        return { data: [] };
+    }
+};
 export const getDietChartById = (id) => api.get(`/diet-charts/${id}`);
 export const createDietChart = async (data) => {
     try {
@@ -75,7 +83,7 @@ export const createDietChart = async (data) => {
             meals: data.meals.map(meal => ({
                 type: meal.type,
                 time: meal.time,
-                items: meal.items.split(',').map(item => item.trim()),
+                items: Array.isArray(meal.items) ? meal.items : meal.items.split(',').map(item => item.trim()),
                 calories: meal.calories,
                 specialInstructions: meal.specialInstructions
             }))
@@ -95,7 +103,7 @@ export const updateDietChart = async (id, data) => {
             meals: data.meals.map(meal => ({
                 type: meal.type,
                 time: meal.time,
-                items: meal.items,
+                items: Array.isArray(meal.items) ? meal.items : meal.items.split(',').map(item => item.trim()),
                 calories: meal.calories,
                 specialInstructions: meal.specialInstructions
             }))
@@ -111,23 +119,94 @@ export const updateMealStatus = (chartId, mealId, status) =>
 export const deleteDietChart = (id) => api.delete(`/diet-charts/${id}`);
 
 // Pantry endpoints
-export const getPantryTasks = () => api.get('/pantry/tasks');
-export const getMyPantryTasks = () => api.get('/pantry/my-tasks');
+export const getPantryTasks = async () => {
+    try {
+        const response = await api.get('/pantry/tasks');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching pantry tasks:', error);
+        return { data: [] };
+    }
+};
+export const getMyPantryTasks = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No auth token');
+        }
+
+        const response = await api.get('/pantry/my-tasks', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        
+        console.log('My pantry tasks response:', response); // Debug log
+        return { data: response.data || [] };
+    } catch (error) {
+        console.error('Error fetching pantry tasks:', error);
+        if (error.response?.status === 403) {
+            toast.error('Not authorized to access pantry tasks');
+        }
+        return { data: [] };
+    }
+};
 export const createPantryTask = (data) => api.post('/pantry/tasks', data);
-export const updateTaskStatus = (taskId, data) => 
-    api.put(`/pantry/tasks/${taskId}/status`, data);
-export const assignDeliveryPerson = (taskId, deliveryPersonId) =>
-    api.put(`/pantry/tasks/${taskId}/assign-delivery`, { deliveryPersonId });
+export const updateTaskStatus = async (taskId, data) => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No auth token');
+        }
+
+        const response = await api.put(`/pantry/tasks/${taskId}/status`, data, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating task status:', error);
+        throw error;
+    }
+};
+export const assignDeliveryPerson = async (taskId, deliveryPersonId) => {
+    try {
+        const response = await api.put(`/pantry/tasks/${taskId}/assign-delivery`, {
+            deliveryPersonId
+        });
+        return response;
+    } catch (error) {
+        console.error('Error assigning delivery person:', error);
+        throw error;
+    }
+};
 export const performQualityCheck = (taskId, notes) =>
     api.put(`/pantry/tasks/${taskId}/quality-check`, { notes });
 
 // Delivery endpoints
 export const getDeliveryTasks = () => api.get('/api/delivery/tasks');
-export const updateDeliveryStatus = (taskId, status, notes) => 
-    api.put(`/api/delivery/tasks/${taskId}/status`, { status, notes });
+export const updateDeliveryStatus = async (taskId, data) => {
+    try {
+        const response = await api.put(`/delivery/tasks/${taskId}/status`, data);
+        console.log('Update delivery status response:', response);
+        return response;
+    } catch (error) {
+        console.error('Error updating delivery status:', error);
+        throw error;
+    }
+};
 
 // Staff endpoints
-export const getDeliveryStaff = () => api.get('/api/users/delivery-staff');
+export const getDeliveryStaff = async () => {
+    try {
+        const response = await api.get('/users/delivery-staff');
+        return { data: response.data || [] };
+    } catch (error) {
+        console.error('Error fetching delivery staff:', error);
+        return { data: [] };
+    }
+};
 export const getPantryStaff = () => api.get('/manager/pantry-staff');
 
 // Manager specific endpoints
@@ -142,15 +221,67 @@ export const getManagerStats = async () => {
 };
 
 export const getDeliveryStatus = () => api.get('/delivery/status');
-export const assignTask = (taskData) => api.post('/pantry/tasks', taskData);
+export const assignTask = async (taskData) => {
+    try {
+        console.log('Assigning task with data:', taskData);
+        const response = await api.post('/manager/assign-task', taskData);
+        return response.data;
+    } catch (error) {
+        console.error('Error assigning task:', error);
+        throw error;
+    }
+};
 
 // Pantry Management endpoints
-export const getPantries = () => api.get('/pantry');
-export const createPantry = (data) => api.post('/pantry', data);
-export const updatePantry = (id, data) => api.put(`/pantry/${id}`, data);
-export const getPantryById = (id) => api.get(`/pantry/${id}`);
-export const assignStaffToPantry = (pantryId, staffId) => 
-    api.post(`/pantry/${pantryId}/staff/${staffId}`);
+export const getPantries = async () => {
+    try {
+        const response = await api.get('/pantry');
+        return { data: response.data || [] };
+    } catch (error) {
+        console.error('Error fetching pantries:', error);
+        throw error;
+    }
+};
+
+export const createPantry = async (data) => {
+    try {
+        const response = await api.post('/pantry', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating pantry:', error);
+        throw error;
+    }
+};
+
+export const updatePantry = async (id, data) => {
+    try {
+        const response = await api.put(`/pantry/${id}`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating pantry:', error);
+        throw error;
+    }
+};
+
+export const getPantryById = async (id) => {
+    try {
+        const response = await api.get(`/pantry/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching pantry:', error);
+        throw error;
+    }
+};
+
+export const assignStaffToPantry = async (pantryId, staffId) => {
+    try {
+        const response = await api.post(`/pantry/${pantryId}/staff/${staffId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error assigning staff to pantry:', error);
+        throw error;
+    }
+};
 
 // Add this with your other API functions
 export const getReports = () => api.get('/manager/reports');
@@ -159,5 +290,17 @@ export const getReports = () => api.get('/manager/reports');
 export const createPantryStaff = (data) => api.post('/auth/register', { ...data, role: 'pantry' });
 export const updatePantryStaff = (id, data) => api.put(`/api/users/${id}`, data);
 export const deletePantryStaff = (id) => api.delete(`/manager/pantry-staff/${id}`);
+
+// Update these delivery endpoints
+export const getMyDeliveryTasks = async () => {
+    try {
+        const response = await api.get('/delivery/my-tasks');
+        console.log('Delivery tasks response:', response);
+        return response;
+    } catch (error) {
+        console.error('Error fetching delivery tasks:', error);
+        throw error;
+    }
+};
 
 export default api; 

@@ -160,9 +160,66 @@ const deleteStaff = async (req, res) => {
     }
 };
 
+// @desc    Assign task to pantry staff
+// @route   POST /api/manager/assign-task
+// @access  Private/Manager
+const assignTask = async (req, res) => {
+    try {
+        const {
+            dietChart,
+            meal,
+            mealType,
+            scheduledTime,
+            assignedTo,
+            specialInstructions
+        } = req.body;
+
+        // Validate required fields
+        if (!dietChart || !meal || !mealType || !scheduledTime || !assignedTo) {
+            return res.status(400).json({ 
+                message: 'Please provide all required fields' 
+            });
+        }
+
+        const task = await PantryTask.create({
+            dietChart,
+            meal,
+            mealType,
+            scheduledTime,
+            assignedTo,
+            specialInstructions,
+            status: 'pending'
+        });
+
+        // Populate necessary fields
+        await task.populate([
+            {
+                path: 'dietChart',
+                populate: {
+                    path: 'patient',
+                    select: 'name roomNumber'
+                }
+            },
+            {
+                path: 'assignedTo',
+                select: 'name'
+            }
+        ]);
+
+        res.status(201).json(task);
+    } catch (error) {
+        console.error('Error in assignTask:', error);
+        res.status(500).json({ 
+            message: 'Failed to assign task',
+            error: error.message 
+        });
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getReports,
     getPantryStaff,
-    deleteStaff
+    deleteStaff,
+    assignTask
 }; 

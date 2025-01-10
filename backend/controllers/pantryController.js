@@ -84,19 +84,24 @@ const getPantryTasks = async (req, res) => {
 // Get tasks assigned to specific staff member
 const getMyTasks = async (req, res) => {
     try {
-        const tasks = await PantryTask.find({ assignedTo: req.user._id })
-            .populate({
-                path: 'dietChart',
-                populate: {
-                    path: 'patient',
-                    select: 'name roomNumber'
-                }
-            })
-            .sort('scheduledTime');
+        const tasks = await PantryTask.find({ 
+            assignedTo: req.user._id,
+            status: { $in: ['pending', 'preparing', 'ready'] }
+        })
+        .populate({
+            path: 'dietChart',
+            populate: {
+                path: 'patient',
+                select: 'name roomNumber'
+            }
+        })
+        .populate('assignedTo', 'name')
+        .sort('scheduledTime');
 
         res.json(tasks);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error in getMyTasks:', error);
+        res.status(500).json({ message: 'Failed to fetch tasks' });
     }
 };
 
@@ -143,55 +148,43 @@ const createPantryTask = async (req, res) => {
 const updateTaskStatus = async (req, res) => {
     try {
         const { taskId } = req.params;
-        const { status, notes, temperature } = req.body;
+        const { status } = req.body;
 
         const task = await PantryTask.findById(taskId);
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Update status and related timestamps
+        // Verify the task is assigned to this user
+        if (task.assignedTo.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to update this task' });
+        }
+
         task.status = status;
-        switch (status) {
-            case 'preparing':
-                task.preparationStartTime = new Date();
-                task.preparationNotes = notes;
-                break;
-            case 'ready':
-                task.preparationEndTime = new Date();
-                task.temperature = temperature;
-                break;
-            case 'out_for_delivery':
-                task.deliveryStartTime = new Date();
-                break;
-            case 'delivered':
-                task.deliveryCompletionTime = new Date();
-                task.deliveryNotes = notes;
-                break;
+        if (status === 'preparing') {
+            task.preparationStartTime = new Date();
+        } else if (status === 'ready') {
+            task.preparationEndTime = new Date();
         }
 
         await task.save();
-        await task.populate([
-            {
-                path: 'dietChart',
-                populate: {
-                    path: 'patient',
-                    select: 'name roomNumber'
-                }
-            },
-            {
-                path: 'assignedTo',
-                select: 'name'
-            },
-            {
-                path: 'deliveryPerson',
-                select: 'name'
+
+        // Populate the response data
+        await task.populate([{
+            path: 'dietChart',
+            populate: {
+                path: 'patient',
+                select: 'name roomNumber'
             }
-        ]);
+        }, {
+            path: 'assignedTo',
+            select: 'name'
+        }]);
 
         res.json(task);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error in updateTaskStatus:', error);
+        res.status(400).json({ message: 'Failed to update task status' });
     }
 };
 

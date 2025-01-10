@@ -14,33 +14,23 @@ const {
     updatePantry
 } = require('../controllers/pantryController');
 
-// Allow both pantry staff and managers to access these routes
+// Protected routes
 router.use(protect);
-router.use(authorize('pantry', 'manager', 'admin'));
 
-// Pantry management routes
+// Pantry Management Routes (Manager Access)
 router.route('/')
-    .get(authorize('manager'), getPantries)
-    .post(authorize('manager'), createPantry);
+    .get(authorize(['manager', 'admin']), getPantries)
+    .post(authorize(['manager', 'admin']), createPantry);
 
 router.route('/:id')
-    .get(authorize('manager'), getPantryById)
-    .put(authorize('manager'), updatePantry);
+    .get(authorize(['manager', 'admin']), getPantryById)
+    .put(authorize(['manager', 'admin']), updatePantry);
 
-// Task management routes
-router.route('/tasks')
-    .get(protect, authorize('pantry', 'manager'), getPantryTasks);
-
-router.route('/my-tasks')
-    .get(protect, authorize('pantry'), getMyTasks);
-
-router.route('/tasks/:taskId/status')
-    .put(protect, authorize('pantry'), updateTaskStatus);
-
-router.route('/tasks/:taskId/assign-delivery')
-    .put(authorize('pantry', 'manager'), assignDeliveryPerson);
-
-router.route('/tasks/:taskId/quality-check')
-    .put(authorize('pantry'), performQualityCheck);
+// Task Routes (Pantry Staff Access)
+router.get('/my-tasks', authorize(['pantry']), getMyTasks);
+router.get('/tasks', authorize(['manager', 'pantry']), getPantryTasks);
+router.put('/tasks/:taskId/status', authorize(['pantry']), updateTaskStatus);
+router.put('/tasks/:taskId/assign-delivery', authorize(['pantry']), assignDeliveryPerson);
+router.put('/tasks/:taskId/quality-check', authorize(['pantry']), performQualityCheck);
 
 module.exports = router; 

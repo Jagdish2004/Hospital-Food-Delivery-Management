@@ -6,10 +6,6 @@ const pantryTaskSchema = new mongoose.Schema({
         ref: 'DietChart',
         required: true
     },
-    meal: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true
-    },
     mealType: {
         type: String,
         enum: ['Breakfast', 'Lunch', 'Snack', 'Dinner'],
@@ -21,36 +17,17 @@ const pantryTaskSchema = new mongoose.Schema({
     },
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        required: true
     },
     status: {
         type: String,
-        enum: ['pending', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'],
+        enum: ['pending', 'preparing', 'ready', 'delivered'],
         default: 'pending'
     },
     preparationStartTime: Date,
     preparationEndTime: Date,
-    deliveryStartTime: Date,
-    deliveryCompletionTime: Date,
-    preparationNotes: String,
-    deliveryNotes: String,
-    deliveryPerson: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    temperature: Number,
-    qualityCheck: {
-        checked: {
-            type: Boolean,
-            default: false
-        },
-        checkedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
-        checkedAt: Date,
-        notes: String
-    }
+    specialInstructions: String
 }, {
     timestamps: true
 });

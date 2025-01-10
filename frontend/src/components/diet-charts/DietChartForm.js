@@ -87,40 +87,21 @@ const DietChartForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        // Validate form data
-        if (!formData.patient) {
-            toast.error('Please select a patient');
-            return;
-        }
-
-        if (!formData.meals.length) {
-            toast.error('Please add at least one meal');
-            return;
-        }
-
-        // Validate each meal
-        const isValidMeals = formData.meals.every(meal => 
-            meal.type && meal.time && meal.items
-        );
-
-        if (!isValidMeals) {
-            toast.error('Please fill in all required meal fields');
-            return;
-        }
+        setLoading(true);
 
         try {
-            setLoading(true);
-            
-            // Format the data
+            const formattedMeals = formData.meals.map(meal => ({
+                ...meal,
+                items: typeof meal.items === 'string' ? 
+                    meal.items.split(',').map(item => item.trim()) : 
+                    meal.items,
+                calories: Number(meal.calories)
+            }));
+
             const dietChartData = {
-                ...formData,
-                meals: formData.meals.map(meal => ({
-                    ...meal,
-                    items: typeof meal.items === 'string' ? 
-                        meal.items.split(',').map(item => item.trim()) : 
-                        meal.items
-                }))
+                patient: formData.patient,
+                status: 'active',
+                meals: formattedMeals
             };
 
             if (id) {
@@ -133,7 +114,7 @@ const DietChartForm = () => {
             navigate('/diet-charts');
         } catch (error) {
             console.error('Error saving diet chart:', error);
-            toast.error(error.response?.data?.message || 'Failed to save diet chart');
+            toast.error('Failed to save diet chart');
         } finally {
             setLoading(false);
         }
@@ -166,6 +147,12 @@ const DietChartForm = () => {
 
     const handleBack = () => {
         setActiveStep((prevStep) => prevStep - 1);
+    };
+
+    const handleMealItemsChange = (index, value) => {
+        const updatedMeals = [...formData.meals];
+        updatedMeals[index].items = value.split(',').map(item => item.trim());
+        setFormData(prev => ({ ...prev, meals: updatedMeals }));
     };
 
     if (loading) {
@@ -336,11 +323,9 @@ const DietChartForm = () => {
                                                         <TextField
                                                             fullWidth
                                                             label="Items"
-                                                            multiline
-                                                            rows={2}
-                                                            value={meal.items}
-                                                            onChange={(e) => handleMealChange(index, 'items', e.target.value)}
-                                                            required
+                                                            value={Array.isArray(meal.items) ? meal.items.join(', ') : meal.items}
+                                                            onChange={(e) => handleMealItemsChange(index, e.target.value)}
+                                                            helperText="Enter items separated by commas"
                                                         />
                                                     </Grid>
                                                     <Grid item xs={12} md={6}>

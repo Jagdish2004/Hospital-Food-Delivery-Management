@@ -3,16 +3,20 @@ const Patient = require('../models/Patient');
 
 // @desc    Get all diet charts
 // @route   GET /api/diet-charts
-// @access  Private/Manager/Admin/Pantry
+// @access  Private
 const getDietCharts = async (req, res) => {
     try {
         const dietCharts = await DietChart.find()
-            .populate('patient', 'name roomNumber bedNumber')
-            .populate('createdBy', 'name')
+            .populate('patient', 'name roomNumber')
             .sort('-createdAt');
+        
         res.json(dietCharts);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error in getDietCharts:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch diet charts',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 

@@ -37,6 +37,8 @@ const Login = () => {
 
         try {
             const response = await loginApi(formData);
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
             login(response.data.token, response.data.user);
             
             // Redirect based on role without showing any messages
@@ -55,14 +57,8 @@ const Login = () => {
                     navigate('/login');
             }
         } catch (error) {
-            // Only show specific login-related errors
-            if (error.response?.status === 401) {
-                setError('Invalid email or password');
-            } else if (error.response?.data?.message) {
-                setError(error.response.data.message);
-            } else {
-                setError('Login failed. Please try again.');
-            }
+            console.error('Login error:', error);
+            toast.error('Failed to login');
         } finally {
             setLoading(false);
         }

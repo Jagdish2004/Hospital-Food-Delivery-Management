@@ -6,7 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Layout from './components/layout/Layout';
 import Login from './components/auth/Login';
 import ManagerDashboard from './components/dashboard/ManagerDashboard';
-import PantryDashboard from './components/pantry/PantryDashboard';
+import PantryDashboard from './components/dashboard/PantryDashboard';
 import PatientList from './components/patients/PatientList';
 import PatientForm from './components/patients/PatientForm';
 import DietChartList from './components/diet-charts/DietChartList';

@@ -36,9 +36,10 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getManagerStats } from '../../services/api';
+import { getManagerStats, getPantryTasks } from '../../services/api';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
+import AssignTaskForm from '../manager/AssignTaskForm';
 
 const ManagerDashboard = () => {
     const navigate = useNavigate();
@@ -55,9 +56,17 @@ const ManagerDashboard = () => {
         recentDietCharts: [],
         recentDeliveries: []
     });
+    const [tasks, setTasks] = useState([]);
+    const [openAssignTask, setOpenAssignTask] = useState(false);
+    const [selectedDietChart, setSelectedDietChart] = useState(null);
+    const [selectedMeal, setSelectedMeal] = useState(null);
 
     useEffect(() => {
         fetchDashboardData();
+    }, []);
+
+    useEffect(() => {
+        fetchTasks();
     }, []);
 
     const fetchDashboardData = async () => {
@@ -69,6 +78,21 @@ const ManagerDashboard = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchTasks = async () => {
+        try {
+            const response = await getPantryTasks();
+            setTasks(response.data);
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+        }
+    };
+
+    const handleAssignTask = (chart, meal) => {
+        setSelectedDietChart(chart);
+        setSelectedMeal(meal);
+        setOpenAssignTask(true);
     };
 
     if (loading) {
@@ -464,6 +488,28 @@ const ManagerDashboard = () => {
                                                 <Typography variant="body2" color="textSecondary">
                                                     Created: {new Date(chart.createdAt).toLocaleDateString()}
                                                 </Typography>
+                                                <Box mt={1}>
+                                                    {chart.meals?.map((meal, index) => (
+                                                        <Box 
+                                                            key={index}
+                                                            display="flex" 
+                                                            alignItems="center" 
+                                                            justifyContent="space-between"
+                                                            mt={1}
+                                                        >
+                                                            <Typography variant="body2">
+                                                                {meal.type} - {meal.time}
+                                                            </Typography>
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                onClick={() => handleAssignTask(chart, meal)}
+                                                            >
+                                                                Assign Task
+                                                            </Button>
+                                                        </Box>
+                                                    ))}
+                                                </Box>
                                             </Box>
                                             <IconButton 
                                                 size="small"
@@ -476,8 +522,68 @@ const ManagerDashboard = () => {
                                 ))}
                             </CardContent>
                         </Card>
+
+                        <AssignTaskForm
+                            open={openAssignTask}
+                            onClose={() => setOpenAssignTask(false)}
+                            dietChart={selectedDietChart}
+                            meal={selectedMeal}
+                            onTaskAssigned={() => {
+                                setOpenAssignTask(false);
+                                fetchDashboardData();
+                                fetchTasks();
+                            }}
+                        />
                     </Grid>
                 </Grid>
+
+                <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Task Status Overview
+                    </Typography>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} md={3}>
+                            <Card>
+                                <CardContent>
+                                    <Typography color="textSecondary">Pending</Typography>
+                                    <Typography variant="h4">
+                                        {tasks.filter(t => t.status === 'pending').length}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <Card>
+                                <CardContent>
+                                    <Typography color="textSecondary">In Progress</Typography>
+                                    <Typography variant="h4">
+                                        {tasks.filter(t => t.status === 'preparing').length}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <Card>
+                                <CardContent>
+                                    <Typography color="textSecondary">Ready</Typography>
+                                    <Typography variant="h4">
+                                        {tasks.filter(t => t.status === 'ready').length}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <Card>
+                                <CardContent>
+                                    <Typography color="textSecondary">Delivered</Typography>
+                                    <Typography variant="h4">
+                                        {tasks.filter(t => t.status === 'delivered').length}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    </Grid>
+                </Paper>
             </Box>
         </Container>
     );
