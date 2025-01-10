@@ -2,7 +2,9 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL,
+    baseURL: process.env.NODE_ENV === 'production'
+        ? 'https://medimeals-oqromym61-jagdish2004s-projects.vercel.app/api'
+        : 'http://localhost:5000/api',
     headers: {
         'Content-Type': 'application/json'
     }

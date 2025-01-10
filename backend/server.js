@@ -25,10 +25,12 @@ connectDB();
 // Middleware
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL
+    ? ['https://medimeals-front.vercel.app', 'http://localhost:3000']
     : 'http://localhost:3000',
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
@@ -40,15 +42,17 @@ app.use((req, res, next) => {
     next();
 });
 
-// Add this before your routes
-app.options('*', cors(corsOptions)); // Enable preflight for all routes
-
-// Add this to handle OPTIONS requests
+// Add this after cors middleware
 app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
+    res.header('Access-Control-Allow-Origin', 'https://medimeals-front.vercel.app');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
 });
 
 // Routes
