@@ -40,6 +40,7 @@ const registerUser = async (req, res) => {
             department
         });
 
+        // Generate token
         const token = generateToken(user._id);
 
         res.status(201).json({
@@ -55,7 +56,7 @@ const registerUser = async (req, res) => {
         });
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(400).json({ 
+        res.status(500).json({ 
             message: 'Registration failed',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });

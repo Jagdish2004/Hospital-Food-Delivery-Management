@@ -35,8 +35,32 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { styled } from '@mui/material/styles';
 
 const drawerWidth = 240;
+
+const BrandText = styled(Typography)(({ theme }) => ({
+    fontFamily: "'Montserrat', sans-serif",
+    fontWeight: 700,
+    fontSize: '1.8rem',
+    color: '#ffffff',
+    textShadow: '2px 2px 4px rgba(0,0,0,0.2)',
+    letterSpacing: '1px',
+    position: 'relative',
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: -4,
+        left: 0,
+        width: '100%',
+        height: '2px',
+        background: 'linear-gradient(90deg, #FFD700 0%, #FFA500 100%)',
+        borderRadius: '2px'
+    },
+    '& span': {
+        color: '#FFD700'
+    }
+}));
 
 const Layout = ({ children }) => {
     const theme = useTheme();
@@ -66,6 +90,7 @@ const Layout = ({ children }) => {
     const handleLogout = () => {
         logout();
         navigate('/login');
+        handleProfileMenuClose();
     };
 
     const isActive = (path) => {
@@ -165,7 +190,7 @@ const Layout = ({ children }) => {
                     ml: { sm: `${drawerWidth}px` },
                 }}
             >
-                <Toolbar>
+                <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <IconButton
                         color="inherit"
                         edge="start"
@@ -174,17 +199,58 @@ const Layout = ({ children }) => {
                     >
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        Hospital Food Service Management
-                    </Typography>
-                    <IconButton
-                        size="large"
-                        edge="end"
-                        color="inherit"
-                        onClick={handleProfileMenuOpen}
-                    >
-                        <AccountCircle />
-                    </IconButton>
+                    
+                    <BrandText variant="h5" noWrap component="div">
+                        <span>Medi</span>Meals
+                    </BrandText>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            borderRadius: 1,
+                            px: 2,
+                            py: 0.5
+                        }}>
+                            <IconButton
+                                size="small"
+                                onClick={handleProfileMenuOpen}
+                                sx={{ mr: 1 }}
+                            >
+                                <Avatar sx={{ 
+                                    width: 32, 
+                                    height: 32,
+                                    bgcolor: 'primary.dark',
+                                    fontSize: '0.875rem'
+                                }}>
+                                    {user?.name?.[0]?.toUpperCase() || <AccountCircle />}
+                                </Avatar>
+                            </IconButton>
+                            <Typography 
+                                variant="subtitle2" 
+                                sx={{ 
+                                    color: 'white',
+                                    display: { xs: 'none', sm: 'block' }
+                                }}
+                            >
+                                {user?.name}
+                            </Typography>
+                        </Box>
+
+                        <IconButton 
+                            color="inherit" 
+                            onClick={handleLogout}
+                            sx={{ 
+                                bgcolor: 'rgba(255,255,255,0.1)',
+                                '&:hover': {
+                                    bgcolor: 'rgba(255,255,255,0.2)'
+                                }
+                            }}
+                        >
+                            <LogoutIcon />
+                        </IconButton>
+                    </Box>
                 </Toolbar>
             </AppBar>
 
@@ -229,25 +295,6 @@ const Layout = ({ children }) => {
             >
                 {children}
             </Box>
-
-            <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleProfileMenuClose}
-            >
-                <MenuItem onClick={handleProfileMenuClose}>
-                    <ListItemIcon>
-                        <SettingsIcon fontSize="small" />
-                    </ListItemIcon>
-                    Settings
-                </MenuItem>
-                <MenuItem onClick={handleLogout}>
-                    <ListItemIcon>
-                        <LogoutIcon fontSize="small" />
-                    </ListItemIcon>
-                    Logout
-                </MenuItem>
-            </Menu>
         </Box>
     );
 };

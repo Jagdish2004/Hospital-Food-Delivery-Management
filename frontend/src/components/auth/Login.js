@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import {
     Container,
     Paper,
@@ -7,120 +6,146 @@ import {
     Button,
     Typography,
     Box,
-    Alert
+    Link,
+    IconButton
 } from '@mui/material';
-import { login as loginApi } from '../../services/api';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Home as HomeIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
-    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
-    const [error, setError] = useState('');
-
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError('');
-
         try {
-            const response = await loginApi(formData);
-            const { token, user } = response.data;
+            const { user } = await login(formData);
+            toast.success('Login successful!');
             
-            // Store token and user data
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            // Update auth context
-            login(token, user);
-
-            // Navigate based on role
+            // Redirect based on user role
             switch (user.role) {
+                case 'manager':
+                    navigate('/dashboard');
+                    break;
                 case 'pantry':
                     navigate('/pantry-dashboard');
                     break;
                 case 'delivery':
                     navigate('/delivery-dashboard');
                     break;
-                case 'manager':
-                case 'admin':
-                    navigate('/dashboard');
-                    break;
                 default:
-                    navigate('/');
+                    navigate('/dashboard');
             }
         } catch (error) {
-            console.error('Login error:', error);
-            setError(error.response?.data?.message || 'Failed to login');
-        } finally {
-            setLoading(false);
+            toast.error(error.response?.data?.message || 'Login failed');
         }
     };
 
     return (
-        <Container component="main" maxWidth="xs">
-            <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
-                <Typography component="h1" variant="h5" align="center">
-                    Sign In
-                </Typography>
-                {error && (
-                    <Alert severity="error" sx={{ mt: 2 }}>
-                        {error}
-                    </Alert>
-                )}
-                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        label="Email Address"
-                        name="email"
-                        type="email"
-                        autoFocus
-                        value={formData.email}
-                        onChange={handleChange}
-                    />
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        label="Password"
-                        name="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                    />
-                    <Button
-                        type="submit"
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 3, mb: 2 }}
-                        disabled={loading}
+        <Box sx={{ 
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, #1976d2 0%, #64b5f6 100%)',
+            py: 8,
+            position: 'relative'
+        }}>
+            {/* Home Button */}
+            <IconButton
+                onClick={() => navigate('/')}
+                sx={{
+                    position: 'absolute',
+                    top: 20,
+                    left: 20,
+                    bgcolor: 'white',
+                    '&:hover': {
+                        bgcolor: 'grey.100'
+                    }
+                }}
+            >
+                <HomeIcon color="primary" />
+            </IconButton>
+
+            <Container maxWidth="sm">
+                <Paper elevation={4} sx={{ 
+                    p: 4, 
+                    borderRadius: 2,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                }}>
+                    <Typography 
+                        variant="h4" 
+                        align="center" 
+                        gutterBottom
+                        sx={{ 
+                            color: 'primary.main',
+                            fontWeight: 700,
+                            mb: 4
+                        }}
                     >
-                        {loading ? 'Signing in...' : 'Sign In'}
-                    </Button>
-                    <Box sx={{ textAlign: 'center' }}>
-                        <Link to="/signup" style={{ textDecoration: 'none' }}>
-                            <Typography variant="body2" color="primary">
-                                Don't have an account? Sign up
+                        Welcome Back
+                    </Typography>
+
+                    <form onSubmit={handleSubmit}>
+                        <TextField
+                            fullWidth
+                            label="Email"
+                            type="email"
+                            margin="normal"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            required
+                            sx={{ mb: 2 }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Password"
+                            type="password"
+                            margin="normal"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            required
+                            sx={{ mb: 3 }}
+                        />
+                        <Button
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            sx={{
+                                py: 1.5,
+                                mb: 2,
+                                fontSize: '1.1rem'
+                            }}
+                        >
+                            Log In
+                        </Button>
+                        <Box sx={{ textAlign: 'center', mt: 2 }}>
+                            <Typography variant="body2" color="textSecondary">
+                                Don't have an account?{' '}
+                                <Link 
+                                    component={RouterLink} 
+                                    to="/signup"
+                                    sx={{
+                                        color: 'primary.main',
+                                        textDecoration: 'none',
+                                        fontWeight: 600,
+                                        '&:hover': {
+                                            textDecoration: 'underline'
+                                        }
+                                    }}
+                                >
+                                    Sign Up
+                                </Link>
                             </Typography>
-                        </Link>
-                    </Box>
-                </Box>
-            </Paper>
-        </Container>
+                        </Box>
+                    </form>
+                </Paper>
+            </Container>
+        </Box>
     );
 };
 

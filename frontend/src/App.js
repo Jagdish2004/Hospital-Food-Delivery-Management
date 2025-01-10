@@ -19,14 +19,36 @@ import 'react-toastify/dist/ReactToastify.css';
 import PantryStaff from './components/pantry/PantryStaff';
 import MealTasks from './components/pantry/MealTasks';
 import DeliveryDashboard from './components/delivery/DeliveryDashboard';
+import Home from './components/Home';
+import Signup from './components/auth/Signup';
 
 const theme = createTheme({
-    // Add your theme customization here
+    typography: {
+        fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
+        h5: {
+            fontFamily: "'Montserrat', sans-serif",
+            fontWeight: 700
+        }
+    },
+    components: {
+        MuiAppBar: {
+            styleOverrides: {
+                root: {
+                    background: 'linear-gradient(90deg, #1976d2 0%, #1565c0 100%)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                }
+            }
+        }
+    }
 });
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const { user } = useAuth();
     const location = useLocation();
+
+    if (location.pathname === '/') {
+        return children;
+    }
 
     if (!user) {
         return <Navigate to="/login" state={{ from: location }} replace />;
@@ -54,12 +76,9 @@ function App() {
             <AuthProvider>
                 <Router>
                     <Routes>
+                        <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
-                        <Route path="/" element={
-                            <ProtectedRoute>
-                                <Navigate to="/dashboard" />
-                            </ProtectedRoute>
-                        } />
+                        <Route path="/signup" element={<Signup />} />
                         <Route path="/dashboard" element={
                             <ProtectedRoute allowedRoles={['manager', 'admin']}>
                                 <ManagerDashboard />

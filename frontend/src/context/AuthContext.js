@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { login as apiLogin } from '../services/api';
 import { toast } from 'react-toastify';
 
 const AuthContext = createContext(null);
@@ -13,10 +14,14 @@ export const AuthProvider = ({ children }) => {
             try {
                 const storedToken = localStorage.getItem('token');
                 const storedUser = localStorage.getItem('user');
-
-                if (storedToken && storedUser) {
+                
+                if (storedToken && storedUser && storedUser !== 'undefined') {
                     setToken(storedToken);
                     setUser(JSON.parse(storedUser));
+                } else {
+                    // Clear potentially corrupted data
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                 }
             } catch (error) {
                 console.error('Auth initialization error:', error);
@@ -30,37 +35,45 @@ export const AuthProvider = ({ children }) => {
         initAuth();
     }, []);
 
-    const login = (token, userData) => {
+    const login = async (credentials) => {
         try {
-            console.log('Login called with:', { token, userData }); // Debug log
+            const response = await apiLogin(credentials);
+            const { token, user } = response.data;
+
+            // Save to localStorage
             localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(userData));
+            localStorage.setItem('user', JSON.stringify(user));
+
+            // Update state
             setToken(token);
-            setUser(userData);
+            setUser(user);
+
+            return { token, user };
         } catch (error) {
             console.error('Login error:', error);
-            toast.error('Error during login');
+            throw error;
         }
     };
 
     const logout = () => {
-        try {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setToken(null);
-            setUser(null);
-        } catch (error) {
-            console.error('Logout error:', error);
-            toast.error('Error during logout');
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
     };
 
     if (loading) {
-        return <div>Loading...</div>; // Or your loading component
+        return <div>Loading...</div>;
     }
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            token, 
+            login, 
+            logout,
+            isAuthenticated: () => !!token && !!user 
+        }}>
             {children}
         </AuthContext.Provider>
     );

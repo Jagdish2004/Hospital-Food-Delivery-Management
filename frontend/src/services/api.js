@@ -54,8 +54,25 @@ api.interceptors.response.use(
 );
 
 // Auth endpoints
-export const login = (credentials) => api.post('/auth/login', credentials);
-export const register = (userData) => api.post('/auth/register', userData);
+export const login = async (credentials) => {
+    try {
+        const response = await api.post('/auth/login', credentials);
+        return response;
+    } catch (error) {
+        console.error('Login error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const register = async (userData) => {
+    try {
+        const response = await api.post('/auth/register', userData);
+        return response;
+    } catch (error) {
+        console.error('Registration error:', error.response?.data || error.message);
+        throw error;
+    }
+};
 
 // Patient endpoints
 export const getPatients = () => api.get('/patients');
