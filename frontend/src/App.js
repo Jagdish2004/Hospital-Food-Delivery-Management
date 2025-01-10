@@ -18,6 +18,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PantryStaff from './components/pantry/PantryStaff';
 import MealTasks from './components/pantry/MealTasks';
+import DeliveryDashboard from './components/delivery/DeliveryDashboard';
 
 const theme = createTheme({
     // Add your theme customization here
@@ -122,6 +123,11 @@ function App() {
                         <Route path="/meal-tasks" element={
                             <ProtectedRoute allowedRoles={['pantry', 'manager']}>
                                 <MealTasks />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/delivery-dashboard" element={
+                            <ProtectedRoute allowedRoles={['delivery']}>
+                                <DeliveryDashboard />
                             </ProtectedRoute>
                         } />
                     </Routes>

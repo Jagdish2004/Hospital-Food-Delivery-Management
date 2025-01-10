@@ -95,7 +95,6 @@ const getMyTasks = async (req, res) => {
                 select: 'name roomNumber'
             }
         })
-        .populate('assignedTo', 'name')
         .sort('scheduledTime');
 
         res.json(tasks);
@@ -144,46 +143,27 @@ const createPantryTask = async (req, res) => {
     }
 };
 
-// Update task status
+// Update task status for staff
 const updateTaskStatus = async (req, res) => {
     try {
         const { taskId } = req.params;
         const { status } = req.body;
 
-        const task = await PantryTask.findById(taskId);
-        if (!task) {
-            return res.status(404).json({ message: 'Task not found' });
-        }
+        const task = await PantryTask.findOne({ 
+            _id: taskId,
+            assignedTo: req.user._id
+        });
 
-        // Verify the task is assigned to this user
-        if (task.assignedTo.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Not authorized to update this task' });
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found or not assigned to you' });
         }
 
         task.status = status;
-        if (status === 'preparing') {
-            task.preparationStartTime = new Date();
-        } else if (status === 'ready') {
-            task.preparationEndTime = new Date();
-        }
-
         await task.save();
-
-        // Populate the response data
-        await task.populate([{
-            path: 'dietChart',
-            populate: {
-                path: 'patient',
-                select: 'name roomNumber'
-            }
-        }, {
-            path: 'assignedTo',
-            select: 'name'
-        }]);
 
         res.json(task);
     } catch (error) {
-        console.error('Error in updateTaskStatus:', error);
+        console.error('Error updating task status:', error);
         res.status(400).json({ message: 'Failed to update task status' });
     }
 };

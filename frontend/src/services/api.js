@@ -130,18 +130,7 @@ export const getPantryTasks = async () => {
 };
 export const getMyPantryTasks = async () => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No auth token');
-        }
-
-        const response = await api.get('/pantry/my-tasks', {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-        
-        console.log('My pantry tasks response:', response); // Debug log
+        const response = await api.get('/pantry/staff/tasks');
         return { data: response.data || [] };
     } catch (error) {
         console.error('Error fetching pantry tasks:', error);
@@ -154,19 +143,11 @@ export const getMyPantryTasks = async () => {
 export const createPantryTask = (data) => api.post('/pantry/tasks', data);
 export const updateTaskStatus = async (taskId, data) => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No auth token');
-        }
-
-        const response = await api.put(`/pantry/tasks/${taskId}/status`, data, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
+        const response = await api.put(`/pantry/staff/tasks/${taskId}/status`, data);
         return response.data;
     } catch (error) {
         console.error('Error updating task status:', error);
+        toast.error('Failed to update task status');
         throw error;
     }
 };
@@ -186,16 +167,6 @@ export const performQualityCheck = (taskId, notes) =>
 
 // Delivery endpoints
 export const getDeliveryTasks = () => api.get('/api/delivery/tasks');
-export const updateDeliveryStatus = async (taskId, data) => {
-    try {
-        const response = await api.put(`/delivery/tasks/${taskId}/status`, data);
-        console.log('Update delivery status response:', response);
-        return response;
-    } catch (error) {
-        console.error('Error updating delivery status:', error);
-        throw error;
-    }
-};
 
 // Staff endpoints
 export const getDeliveryStaff = async () => {
@@ -207,7 +178,10 @@ export const getDeliveryStaff = async () => {
         return { data: [] };
     }
 };
+
 export const getPantryStaff = () => api.get('/manager/pantry-staff');
+
+export const getDeliveryStatus = () => api.get('/delivery/status');
 
 // Manager specific endpoints
 export const getManagerStats = async () => {
@@ -220,7 +194,6 @@ export const getManagerStats = async () => {
     }
 };
 
-export const getDeliveryStatus = () => api.get('/delivery/status');
 export const assignTask = async (taskData) => {
     try {
         console.log('Assigning task with data:', taskData);
@@ -290,17 +263,5 @@ export const getReports = () => api.get('/manager/reports');
 export const createPantryStaff = (data) => api.post('/auth/register', { ...data, role: 'pantry' });
 export const updatePantryStaff = (id, data) => api.put(`/api/users/${id}`, data);
 export const deletePantryStaff = (id) => api.delete(`/manager/pantry-staff/${id}`);
-
-// Update these delivery endpoints
-export const getMyDeliveryTasks = async () => {
-    try {
-        const response = await api.get('/delivery/my-tasks');
-        console.log('Delivery tasks response:', response);
-        return response;
-    } catch (error) {
-        console.error('Error fetching delivery tasks:', error);
-        throw error;
-    }
-};
 
 export default api; 

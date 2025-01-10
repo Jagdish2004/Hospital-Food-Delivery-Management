@@ -10,17 +10,14 @@ import {
     Button,
     CircularProgress,
     Chip,
-    Divider,
-    Tabs,
-    Tab
+    Divider
 } from '@mui/material';
 import {
     Kitchen as KitchenIcon,
     RestaurantMenu as MenuIcon,
     Schedule as ScheduleIcon,
     Person as PersonIcon,
-    Room as RoomIcon,
-    LocalDining as DiningIcon
+    Room as RoomIcon
 } from '@mui/icons-material';
 import { getMyPantryTasks, updateTaskStatus } from '../../services/api';
 import { toast } from 'react-toastify';
@@ -28,7 +25,6 @@ import { toast } from 'react-toastify';
 const PantryDashboard = () => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [tabValue, setTabValue] = useState(0);
 
     useEffect(() => {
         fetchTasks();
@@ -41,12 +37,12 @@ const PantryDashboard = () => {
         try {
             setLoading(true);
             const response = await getMyPantryTasks();
-            console.log('Fetched tasks:', response.data); // Debug log
+            console.log('Fetched tasks:', response.data);
             setTasks(response.data || []);
         } catch (error) {
             console.error('Error fetching tasks:', error);
             toast.error('Failed to fetch tasks');
-            setTasks([]); // Set empty array on error
+            setTasks([]);
         } finally {
             setLoading(false);
         }
@@ -56,7 +52,7 @@ const PantryDashboard = () => {
         try {
             await updateTaskStatus(taskId, { status: newStatus });
             toast.success(`Task marked as ${newStatus}`);
-            fetchTasks(); // Refresh the task list
+            fetchTasks();
         } catch (error) {
             console.error('Error updating task status:', error);
             toast.error('Failed to update task status');
@@ -71,69 +67,6 @@ const PantryDashboard = () => {
             default: return 'default';
         }
     };
-
-    const renderTaskCard = (task) => (
-        <Grid item xs={12} md={6} lg={4} key={task._id}>
-            <Card elevation={2}>
-                <CardContent>
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                        <PersonIcon color="primary" />
-                        <Typography variant="h6">
-                            {task.dietChart?.patient?.name}
-                        </Typography>
-                    </Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <RoomIcon color="action" />
-                        <Typography color="textSecondary">
-                            Room {task.dietChart?.patient?.roomNumber}
-                        </Typography>
-                    </Box>
-                    <Divider sx={{ my: 1 }} />
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <DiningIcon color="primary" />
-                        <Typography variant="body1">
-                            {task.mealType}
-                        </Typography>
-                    </Box>
-                    <Typography variant="body2" gutterBottom>
-                        <strong>Scheduled:</strong> {task.scheduledTime}
-                    </Typography>
-                    {task.specialInstructions && (
-                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                            <strong>Instructions:</strong> {task.specialInstructions}
-                        </Typography>
-                    )}
-                    <Box mt={2}>
-                        <Chip 
-                            label={task.status.toUpperCase()}
-                            color={getStatusChipColor(task.status)}
-                            sx={{ mb: 2 }}
-                        />
-                        {task.status === 'pending' && (
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                fullWidth
-                                onClick={() => handleStatusUpdate(task._id, 'preparing')}
-                            >
-                                Start Preparation
-                            </Button>
-                        )}
-                        {task.status === 'preparing' && (
-                            <Button
-                                variant="contained"
-                                color="success"
-                                fullWidth
-                                onClick={() => handleStatusUpdate(task._id, 'ready')}
-                            >
-                                Mark as Ready
-                            </Button>
-                        )}
-                    </Box>
-                </CardContent>
-            </Card>
-        </Grid>
-    );
 
     if (loading) {
         return (
@@ -151,7 +84,7 @@ const PantryDashboard = () => {
     return (
         <Container maxWidth="lg">
             <Box p={3}>
-                {/* Dashboard Header */}
+                {/* Header */}
                 <Paper 
                     elevation={3} 
                     sx={{ 
@@ -164,9 +97,9 @@ const PantryDashboard = () => {
                     <Box display="flex" alignItems="center" gap={2}>
                         <KitchenIcon sx={{ fontSize: 40 }} />
                         <Box>
-                            <Typography variant="h4">Kitchen Tasks</Typography>
+                            <Typography variant="h4">Kitchen Dashboard</Typography>
                             <Typography variant="subtitle1">
-                                View and manage meal preparation tasks
+                                Manage meal preparation tasks
                             </Typography>
                         </Box>
                     </Box>
@@ -215,49 +148,75 @@ const PantryDashboard = () => {
                     </Grid>
                 </Grid>
 
-                {/* Task Tabs */}
-                <Paper elevation={3} sx={{ mb: 3 }}>
-                    <Tabs
-                        value={tabValue}
-                        onChange={(e, newValue) => setTabValue(newValue)}
-                        indicatorColor="primary"
-                        textColor="primary"
-                        variant="fullWidth"
-                    >
-                        <Tab label={`Pending (${pendingTasks.length})`} />
-                        <Tab label={`In Preparation (${preparingTasks.length})`} />
-                        <Tab label={`Ready (${readyTasks.length})`} />
-                    </Tabs>
+                {/* Task List */}
+                <Paper elevation={3} sx={{ p: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                        My Tasks
+                    </Typography>
+                    <Grid container spacing={3}>
+                        {tasks.map((task) => (
+                            <Grid item xs={12} md={6} lg={4} key={task._id}>
+                                <Card elevation={2}>
+                                    <CardContent>
+                                        <Box display="flex" alignItems="center" gap={1} mb={2}>
+                                            <PersonIcon color="primary" />
+                                            <Typography variant="h6">
+                                                {task.dietChart?.patient?.name}
+                                            </Typography>
+                                        </Box>
+                                        <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                            <RoomIcon color="action" />
+                                            <Typography color="textSecondary">
+                                                Room {task.dietChart?.patient?.roomNumber}
+                                            </Typography>
+                                        </Box>
+                                        <Divider sx={{ my: 1 }} />
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Meal:</strong> {task.mealType}
+                                        </Typography>
+                                        <Typography variant="body2" gutterBottom>
+                                            <strong>Time:</strong> {task.scheduledTime}
+                                        </Typography>
+                                        <Box mt={2}>
+                                            <Chip 
+                                                label={task.status.toUpperCase()}
+                                                color={getStatusChipColor(task.status)}
+                                                sx={{ mb: 2 }}
+                                            />
+                                            {task.status === 'pending' && (
+                                                <Button
+                                                    variant="contained"
+                                                    color="primary"
+                                                    fullWidth
+                                                    onClick={() => handleStatusUpdate(task._id, 'preparing')}
+                                                >
+                                                    Start Preparation
+                                                </Button>
+                                            )}
+                                            {task.status === 'preparing' && (
+                                                <Button
+                                                    variant="contained"
+                                                    color="success"
+                                                    fullWidth
+                                                    onClick={() => handleStatusUpdate(task._id, 'ready')}
+                                                >
+                                                    Mark as Ready
+                                                </Button>
+                                            )}
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        ))}
+                        {tasks.length === 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="body1" color="textSecondary" textAlign="center">
+                                    No tasks assigned
+                                </Typography>
+                            </Grid>
+                        )}
+                    </Grid>
                 </Paper>
-
-                {/* Task Lists */}
-                <Grid container spacing={3}>
-                    {tabValue === 0 && pendingTasks.map(task => renderTaskCard(task))}
-                    {tabValue === 1 && preparingTasks.map(task => renderTaskCard(task))}
-                    {tabValue === 2 && readyTasks.map(task => renderTaskCard(task))}
-                    
-                    {tabValue === 0 && pendingTasks.length === 0 && (
-                        <Grid item xs={12}>
-                            <Typography variant="body1" color="textSecondary" textAlign="center">
-                                No pending tasks at the moment
-                            </Typography>
-                        </Grid>
-                    )}
-                    {tabValue === 1 && preparingTasks.length === 0 && (
-                        <Grid item xs={12}>
-                            <Typography variant="body1" color="textSecondary" textAlign="center">
-                                No tasks currently in preparation
-                            </Typography>
-                        </Grid>
-                    )}
-                    {tabValue === 2 && readyTasks.length === 0 && (
-                        <Grid item xs={12}>
-                            <Typography variant="body1" color="textSecondary" textAlign="center">
-                                No tasks ready for delivery
-                            </Typography>
-                        </Grid>
-                    )}
-                </Grid>
             </Box>
         </Container>
     );

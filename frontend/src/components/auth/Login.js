@@ -37,28 +37,33 @@ const Login = () => {
 
         try {
             const response = await loginApi(formData);
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-            login(response.data.token, response.data.user);
+            const { token, user } = response.data;
             
-            // Redirect based on role without showing any messages
-            switch (response.data.user.role) {
+            // Store token and user data
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Update auth context
+            login(token, user);
+
+            // Navigate based on role
+            switch (user.role) {
                 case 'pantry':
                     navigate('/pantry-dashboard');
+                    break;
+                case 'delivery':
+                    navigate('/delivery-dashboard');
                     break;
                 case 'manager':
                 case 'admin':
                     navigate('/dashboard');
                     break;
-                case 'delivery':
-                    navigate('/delivery-dashboard');
-                    break;
                 default:
-                    navigate('/login');
+                    navigate('/');
             }
         } catch (error) {
             console.error('Login error:', error);
-            toast.error('Failed to login');
+            setError(error.response?.data?.message || 'Failed to login');
         } finally {
             setLoading(false);
         }

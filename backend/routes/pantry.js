@@ -33,4 +33,8 @@ router.put('/tasks/:taskId/status', authorize(['pantry']), updateTaskStatus);
 router.put('/tasks/:taskId/assign-delivery', authorize(['pantry']), assignDeliveryPerson);
 router.put('/tasks/:taskId/quality-check', authorize(['pantry']), performQualityCheck);
 
+// Separate routes for pantry staff tasks
+router.get('/staff/tasks', protect, authorize(['pantry']), getMyTasks);
+router.put('/staff/tasks/:taskId/status', protect, authorize(['pantry']), updateTaskStatus);
+
 module.exports = router; 

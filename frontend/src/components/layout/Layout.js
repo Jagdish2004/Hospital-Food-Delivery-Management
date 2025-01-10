@@ -74,44 +74,23 @@ const Layout = ({ children }) => {
 
     const getMenuItems = () => {
         const menuItems = [];
-
-        if (user?.role === 'manager') {
+        
+        if (user?.role === 'manager' || user?.role === 'admin') {
             menuItems.push(
                 { path: '/dashboard', icon: <DashboardIcon />, text: 'Dashboard' },
-                {
-                    key: 'patients',
-                    icon: <PersonIcon />,
-                    text: 'Patients',
-                    subItems: [
-                        { path: '/patients', text: 'All Patients' },
-                        { path: '/patients/new', text: 'Add Patient' }
-                    ]
-                },
-                {
-                    key: 'diet-charts',
-                    icon: <DietIcon />,
-                    text: 'Diet Charts',
-                    subItems: [
-                        { path: '/diet-charts', text: 'All Diet Charts' },
-                        { path: '/diet-charts/new', text: 'Create Diet Chart' }
-                    ]
-                },
-                {
-                    key: 'pantry',
-                    icon: <PantryIcon />,
-                    text: 'Pantry',
-                    subItems: [
-                        { path: '/pantry-management', text: 'Manage Pantries' },
-                        { path: '/pantry-staff', text: 'Pantry Staff' }
-                    ]
-                },
+                { path: '/patients', icon: <PersonIcon />, text: 'Patients' },
+                { path: '/diet-charts', icon: <DietIcon />, text: 'Diet Charts' },
+                { path: '/pantry-management', icon: <PantryIcon />, text: 'Pantry Management' },
+                { path: '/pantry-staff', icon: <StaffIcon />, text: 'Pantry Staff' },
                 { path: '/reports', icon: <ReportIcon />, text: 'Reports' }
             );
         } else if (user?.role === 'pantry') {
             menuItems.push(
-                { path: '/pantry-dashboard', icon: <DashboardIcon />, text: 'Dashboard' },
-                { path: '/meal-tasks', icon: <TaskIcon />, text: 'Meal Tasks' },
-                { path: '/delivery-management', icon: <DeliveryIcon />, text: 'Deliveries' }
+                { path: '/pantry-dashboard', icon: <DashboardIcon />, text: 'Dashboard' }
+            );
+        } else if (user?.role === 'delivery') {
+            menuItems.push(
+                { path: '/delivery-dashboard', icon: <DeliveryIcon />, text: 'Delivery Dashboard' }
             );
         }
 

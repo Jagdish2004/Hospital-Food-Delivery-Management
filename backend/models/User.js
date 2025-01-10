@@ -18,9 +18,8 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        required: true,
-        enum: ['admin', 'manager', 'pantry', 'delivery'],
-        default: 'delivery'
+        enum: ['manager', 'admin', 'pantry', 'delivery'],
+        required: true
     },
     contactNumber: {
         type: String,

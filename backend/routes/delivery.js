@@ -6,10 +6,10 @@ const {
     updateDeliveryStatus
 } = require('../controllers/deliveryController');
 
-router.route('/tasks')
-    .get(protect, getDeliveryTasks);
+// Protected routes
+router.use(protect);
 
-router.route('/tasks/:id/status')
-    .put(protect, updateDeliveryStatus);
+router.get('/tasks', getDeliveryTasks);
+router.put('/tasks/:taskId/status', updateDeliveryStatus); // Updated route parameter to match controller
 
 module.exports = router; 

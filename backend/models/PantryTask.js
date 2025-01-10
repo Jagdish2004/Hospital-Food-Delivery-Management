@@ -22,12 +22,18 @@ const pantryTaskSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'preparing', 'ready', 'delivered'],
+        enum: ['pending', 'preparing', 'ready', 'in_transit', 'delivered'],
         default: 'pending'
     },
     preparationStartTime: Date,
     preparationEndTime: Date,
-    specialInstructions: String
+    specialInstructions: String,
+    deliveryPerson: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    deliveryStartTime: Date,
+    deliveryEndTime: Date
 }, {
     timestamps: true
 });
