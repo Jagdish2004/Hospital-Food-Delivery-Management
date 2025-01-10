@@ -24,7 +24,7 @@ connectDB();
 
 // Middleware
 const corsOptions = {
-  origin: ['https://medimeals-front.vercel.app/', 'http://localhost:3000'],
+  origin: ['https://medimeals-front.vercel.app', 'http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200
 };
